@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import sys
+import os
 
 try:
     from skbuild import setup
@@ -28,6 +29,8 @@ setup_requires = [
 
 if any(arg in sys.argv for arg in ("pytest", "test")):
     setup_requires.append("pytest-runner")
+
+os.environ["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
 setup(
     setup_requires=setup_requires,
