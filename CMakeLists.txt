@@ -150,6 +150,8 @@ endif()
 find_package(nlohmann_json CONFIG)
 if(TARGET nlohmann_json::nlohmann_json)
   message(STATUS "Skip Download nlohmann_json")
+  # Set policy version minimum to fix compatibility issue with CMake 4.0.0 even when using system package
+  set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum CMake policy version" FORCE)
 else()
   message(STATUS "Downlod nlohmann_json")
   set(JSON_BuildTests OFF CACHE INTERNAL "")
