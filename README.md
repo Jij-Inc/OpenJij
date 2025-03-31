@@ -43,7 +43,7 @@
   import cxxjij
   ```
 
-- [Documents](https://openjij.github.io/OpenJij/)
+- [Documents](https://jij-inc.github.io/OpenJij/)
 
 - [C++ Docs](https://openjij.github.io/OpenJij-Reference-Page/index.html)
 
