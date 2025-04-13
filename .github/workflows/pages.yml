@@ -42,9 +42,11 @@ jobs:
         shell: bash
         run: |
           set -eux
+          cd docs
           mkdir build
       - name: Jupyter Book 
         run: |
+          cd docs
           sh doc_build.sh 
       - name: du -a 
         shell: bash
