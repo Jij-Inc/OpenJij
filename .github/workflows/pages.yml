@@ -36,6 +36,7 @@ jobs:
       - name: Install via uv
         run: |
          pip install uv
+         cd docs
          uv sync
       - name: Prepare 
         shell: bash

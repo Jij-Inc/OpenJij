@@ -1,4 +1,3 @@
-uv run python generate_redirects.py en en -d redirect
 uv run jupyter book build ja
 uv run jupyter book build en
 # _build/htmlがあれば中身を削除、なければ作成
@@ -9,6 +8,8 @@ else
 fi
 
 cp -rf redirect/* _build/html
+
+uv run python generate_redirects.py en en -d _build/html
 
 mkdir -p _build/html/ja
 mkdir -p _build/html/en
