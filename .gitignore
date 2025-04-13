@@ -180,3 +180,6 @@ project_template/tutorial
 *.xcodeproj
 *.DS_Store
 *.entitlements
+
+docs/ja/_build
+docs/en/_build

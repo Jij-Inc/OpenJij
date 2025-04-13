@@ -2,7 +2,7 @@
 name: Deploy static content to Pages
 
 env:
-  Python_Version: '3.9'
+  Python_Version: '3.11'
 
 on:
   release:
@@ -79,6 +79,10 @@ jobs:
          sudo apt-get upgrade -y
          sudo apt-get install -y dvisvgm graphviz mscgen dia pdf2svg astyle doxygen doxygen-doxyparse fonts-liberation python3-breathe
          npm install -g katex marked
+      - name: Install via uv
+        run: |
+         pip install uv
+         uv install
       - name: Prepare 
         shell: bash
         run: |
@@ -102,7 +106,7 @@ jobs:
           --target cxxjij_header_only_docs
       - name: Jupyter Book 
         run: |
-          jupyter-book build docs --all
+          sh doc_build.sh 
       - name: du -a 
         shell: bash
         if: always()

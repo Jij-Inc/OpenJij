@@ -1,0 +1,33 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: intro
+parts:
+  - caption: "Tutorial"
+    chapters:
+      - file: tutorial/000-intro_optimization_and_Ising
+      - file: tutorial/001-openjij_introduction
+      - file: tutorial/002-HuboSolver
+      - file: tutorial/003-jijmodeling_openjij_tsp
+      - file: tutorial/004-Evaluation
+      - file: tutorial/005-benchmark_sparse_dense
+      - file: tutorial/optimization_index
+        sections:
+        - file: tutorial/optimization/number_partition
+        - file: tutorial/optimization/knapsack
+        - file: tutorial/optimization/graph_coloring
+        - file: tutorial/optimization/clique_cover
+        - file: tutorial/optimization/integer_jobs
+        - file: tutorial/optimization/ProteinFoldingHubo
+        - file: tutorial/optimization/ReverseQuantumAnnealing
+      - file: tutorial/machine_learning_index
+        sections:
+        - file: tutorial/machine_learning/clustering
+        - file: tutorial/machine_learning/qboost
+      - file: tutorial/physics_index
+        sections:
+        - file: tutorial/physics/MonteCarloSampling
+        - file: tutorial/physics/IntroductionCoreInterface
+        - file: tutorial/physics/ClassicalSystem
+        - file: tutorial/physics/QuantumSystem

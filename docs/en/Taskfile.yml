@@ -1,0 +1,25 @@
+# https://taskfile.dev
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  build:
+    desc: "Build the book in docs/en"
+    cmds:
+      - uv run jupyter-book build .
+
+  open:
+    desc: "Open the book in docs/en"
+    cmds:
+      - uv run python -m webbrowser file:///$(pwd)/_build/html/index.html
+
+  watch:
+    desc: "Watch the book in docs/en"
+    cmds:
+      - fswatch -o $(find . -name '*.ipynb' -or -name '*.md') | xargs -n1 -I{} uv run jupyter-book build .
+
+  default:
+    desc: "Build and open the book in docs/en"
+    cmds:
+      - task: build
+      - task: open

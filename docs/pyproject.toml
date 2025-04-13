@@ -1,0 +1,15 @@
+[project]
+name = "openjij-tutorial"
+version = "0.1.0"
+description = "OpenJij Tutorial"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "jijmodeling>=1.12.3",
+    "jupyter-book>=1.0.4.post1",
+    "matplotlib>=3.10.1",
+    "networkx>=3.4.2",
+    "ommx>=1.9.2",
+    "ommx-openjij-adapter>=1.9.2",
+    "openjij>=0.9.2",
+]
