@@ -20,7 +20,8 @@ parts:
         - file: tutorial/optimization/clique_cover
         - file: tutorial/optimization/integer_jobs
         - file: tutorial/optimization/ProteinFoldingHubo
-        - file: tutorial/optimization/ReverseQuantumAnnealing
+        - file: tutorial/optimization/ReverseQuantumAnnealing\
+        - file: tutorial/optimization/blackbox_optimization
       - file: tutorial/machine_learning_index
         sections:
         - file: tutorial/machine_learning/clustering
