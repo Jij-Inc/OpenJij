@@ -45,8 +45,14 @@ jobs:
           cd docs
           mkdir build
       - name: Jupyter Book 
+        env:
+          GA4_TRACKING_ID: ${{ secrets.GA4_TRACKING_ID }}
         run: |
           cd docs
+          # Replace GA4_TRACKING_ID placeholder with actual value from secrets
+          # Using | as delimiter to avoid issues with / in the GA4 ID
+          sed -i "s|GA4_TRACKING_ID|${GA4_TRACKING_ID}|g" en/_config.yml
+          sed -i "s|GA4_TRACKING_ID|${GA4_TRACKING_ID}|g" ja/_config.yml
           sh doc_build.sh 
       - name: du -a 
         shell: bash

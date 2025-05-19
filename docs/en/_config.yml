@@ -33,7 +33,7 @@ html:
   use_issues_button: true
   use_repository_button: true
   analytics:
-    google_analytics_id: ${{ secrets.GA4_TRACKING_ID }}
+    google_analytics_id: GA4_TRACKING_ID
 
   extra_js:
     - _static/language_switch.js
