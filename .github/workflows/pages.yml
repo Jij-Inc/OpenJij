@@ -44,6 +44,13 @@ jobs:
           set -eux
           cd docs
           mkdir build
+      - name: Validate GA4_TRACKING_ID
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.GA4_TRACKING_ID }}" ]; then
+            echo "Error: GA4_TRACKING_ID is not set"
+            exit 1
+          fi
       - name: Jupyter Book 
         env:
           GA4_TRACKING_ID: ${{ secrets.GA4_TRACKING_ID }}
