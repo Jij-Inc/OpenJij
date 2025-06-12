@@ -12,6 +12,144 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+[project]
+name = "openjij"
+description = "Framework for the Ising model and QUBO."
+authors = [{name = "Jij Inc.", email = "info@openjij.org"}]
+readme = "README.md"
+license = {text = "Apache License 2.0"}
+dynamic = ["version"]
+requires-python = ">=3.8, <3.13"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+]
+dependencies = [
+    "numpy >=1.17.3, <1.27.0",
+    "dimod <0.13.0",
+    "scipy >=1.7.3, <1.12.0",
+    "requests >=2.28.0, <2.32.0",
+    "jij-cimod >=1.6.0, <1.7.0",
+    "typing-extensions >=4.2.0",
+]
+
+[project.urls]
+Homepage = "https://www.openjij.org"
+Source = "https://github.com/OpenJij/OpenJij"
+Documentation = "https://openjij.github.io/OpenJij"
+Reference = "https://ref.openjij.org/index.html"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest-runner",
+    "pytest-randomly",
+    "pytest-spec",
+    "coverage",
+]
+dev = [
+    "pre-commit",
+    "cmake",
+    "ninja; platform_system != 'Windows'",
+    "wheel",
+    "setuptools_scm[toml]",
+    "build",
+    "pybind11",
+    "scikit-build",
+    "auditwheel; platform_system == 'Linux'",
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest-runner",
+    "pytest-randomly",
+    "pytest-spec",
+    "coverage",
+]
+format = [
+    "isort",
+    "black",
+    "autoflake",
+    "autopep8",
+    "mdformat",
+    "mdformat-gfm",
+    "mdformat-frontmatter",
+    "mdformat-footnote",
+    "mdformat-myst",
+]
+lint = [
+    "flake8",
+    "flake8-alfred",
+    "flake8-annotations-complexity",
+    "flake8-bandit",
+    "flake8-black",
+    "flake8-blind-except",
+    "flake8-broken-line",
+    "flake8-bugbear",
+    "flake8-builtins",
+    "flake8-class-newline",
+    "flake8-cognitive-complexity",
+    "flake8-commas",
+    "flake8-comprehensions",
+    "flake8-debugger",
+    "flake8-django",
+    "flake8-docstrings",
+    "flake8-eradicate",
+    "flake8-executable",
+    "flake8-expression-complexity",
+    "flake8-fixme",
+    "flake8-functions",
+    "flake8-functions-names",
+    "flake8-isort",
+    "flake8-logging-format",
+    "flake8-multiline-containers",
+    "flake8-mutable",
+    "flake8-pep3101",
+    "flake8-pie",
+    "flake8-plugin-utils",
+    "flake8-polyfill",
+    "flake8-print",
+    "flake8-printf-formatting",
+    "flake8-pytest",
+    "flake8-pytest-style",
+    "flake8-quotes",
+    "flake8-requirements",
+    "flake8-return",
+    "flake8-rst",
+    "flake8-rst-docstrings",
+    "flake8-simplify",
+    "flake8-string-format",
+    "flake8-tidy-imports",
+    "flake8-typing-imports",
+    "flake8-use-fstring",
+    "flake8-use-pathlib",
+    "flake8-variables-names",
+    "mypy",
+    "pyright",
+    "lizard",
+]
+docs = [
+    "jupyter-book",
+    "sphinx >=5.2.0",
+    "sphinx-autoapi",
+    "sphinx_sitemap",
+    "sphinx-inline-tabs",
+    "sphinxcontrib-katex",
+]
+
 [build-system]
 requires = [
    'setuptools_scm[toml]', 
