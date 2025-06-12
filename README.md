@@ -106,17 +106,22 @@ pre-commit install
 ### Python
 
 ```sh
-$ python -m venv .venv
-$ . .venv/bin/activate
-$ pip install pip-tools 
-$ pip-compile setup.cfg
-$ pip-compile dev-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt
-$ source .venv/bin/activate
+# Install uv (if not already installed)
+$ curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Setup development environment
+$ uv venv
+$ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+$ uv sync --all-extras
+
+# Build and test
 $ export CMAKE_BUILD_TYPE=Debug
 $ python setup.py --force-cmake install --build-type Debug -G Ninja
-$ python setup.py --build-type Debug test 
-$ python -m coverage html
+
+# Run tests using uv (recommended)
+$ uv run pytest --cov --cov-report=html
+
+# Note: `python setup.py test` is deprecated and may not work with newer setuptools
 ```
 
 ### C++
@@ -136,38 +141,26 @@ Needs: CMake > 3.22, C++17
 - Format
 
 ```sh
-$ pip-compile format-requirements.in
-$ pip-sync format-requirements.txt
-```
-
-```sh
-$ python -m isort 
-$ python -m black 
+$ uv run --extra format isort ./openjij
+$ uv run --extra format black ./openjij
 ```
 
 - Aggressive Format
 
 ```sh
-$ python -m isort --force-single-line-imports --verbose ./openjij
-$ python -m autoflake --in-place --recursive --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables ./openjij
-$ python -m autopep8 --in-place --aggressive --aggressive  --recursive ./openjij
-$ python -m isort ./openjij
-$ python -m black ./openjij
+$ uv run --extra format isort --force-single-line-imports --verbose ./openjij
+$ uv run --extra format autoflake --in-place --recursive --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables ./openjij
+$ uv run --extra format autopep8 --in-place --aggressive --aggressive  --recursive ./openjij
+$ uv run --extra format isort ./openjij
+$ uv run --extra format black ./openjij
 ```
 
 - Lint
 
 ```sh
-$ pip-compile setup.cfg
-$ pip-compile dev-requirements.in
-$ pip-compile lint-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt lint-requirements.txt
-```
-
-```sh
-$ python -m flake8
-$ python -m mypy
-$ python -m pyright
+$ uv run --extra lint flake8
+$ uv run --extra lint mypy
+$ uv run --extra lint pyright
 ```
 
 ## Python Documentation 
@@ -176,20 +169,17 @@ With KaTeX
 Need: Graphviz
 
 ``` sh
-$ pip-compile setup.cfg
-$ pip-compile build-requirements.in
-$ pip-compile doc-requirements.in
-$ pip-sync requirements.txt build-requirements.txt doc-requirements.txt
+$ uv sync --extra docs
 ```
 
 Please place your document to `docs/tutorial`either markdown or jupyter notebook style.
 
 ```sh
-$ pip install -vvv .
+$ uv pip install -vvv .
 ```
 
 ```sh 
-$ jupyter-book build docs --all
+$ uv run jupyter-book build docs --all
 ```
 
 
