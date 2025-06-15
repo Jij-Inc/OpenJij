@@ -518,8 +518,8 @@ class SASampler(BaseSampler):
         J: dict[tuple, float],
         vartype: Optional[str] = None,
         num_sweeps: int = 1000,
-        num_reads: int = 1,
-        num_threads: int = 1,
+        num_reads: Optional[int] = None,
+        num_threads: Optional[int] = None,
         beta_min: Optional[float] = None,
         beta_max: Optional[float] = None,
         updater: str = "METROPOLIS",
@@ -559,6 +559,12 @@ class SASampler(BaseSampler):
                 >>> response = sampler.sample_hubo(J, "BINARY")
         """
 
+
+        # Set default values for num_reads and num_threads if None
+        if num_reads is None:
+            num_reads = self._default_params["num_reads"]
+        if num_threads is None:
+            num_threads = self._default_params["num_threads"]
 
         if updater=="k-local" or not isinstance(J, dict):
             # To preserve the correspondence with the old version.
