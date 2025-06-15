@@ -19,6 +19,8 @@ except ImportError:
 import cimod
 import dimod
 import numpy as np
+import multiprocessing
+import os
 
 from dimod import BINARY, SPIN
 
@@ -63,6 +65,23 @@ class SASampler(BaseSampler):
         - beta is less than zero.
     """
 
+    @staticmethod
+    def get_default_num_threads():
+        """利用可能なCPUコア数を取得してデフォルト値として返す"""
+        try:
+            # 環境変数での制御も可能にする
+            if 'OPENJIJ_NUM_THREADS' in os.environ:
+                return int(os.environ['OPENJIJ_NUM_THREADS'])
+            if 'OMP_NUM_THREADS' in os.environ:
+                return int(os.environ['OMP_NUM_THREADS'])
+            
+            # CPUコア数を取得
+            cpu_count = multiprocessing.cpu_count()
+            return cpu_count
+        except:
+            # 何らかのエラーが発生した場合は1を返す
+            return 1
+
     @property
     def parameters(self):
         return {
@@ -72,12 +91,18 @@ class SASampler(BaseSampler):
 
     def __init__(self):
 
+        # Get dynamic default values based on system capabilities
+        default_num_threads = self.get_default_num_threads()
+        default_num_reads = default_num_threads  # Set num_reads to be same as num_threads
+
         # Set default parameters
         num_sweeps = 1000
-        num_reads = 1
+        num_reads = default_num_reads
         beta_min = None
         beta_max = None
         schedule = None
+        local_search = False
+        num_threads = default_num_threads
 
         self._default_params = {
             "beta_min": beta_min,
@@ -85,6 +110,8 @@ class SASampler(BaseSampler):
             "num_sweeps": num_sweeps,
             "schedule": schedule,
             "num_reads": num_reads,
+            "local_search": local_search,
+            "num_threads": num_threads,
         }
 
         self._params = self._default_params.copy()
@@ -143,6 +170,8 @@ class SASampler(BaseSampler):
         sparse: Optional[bool] = None,
         reinitialize_state: Optional[bool] = None,
         seed: Optional[int] = None,
+        num_threads: Optional[int] = None,
+        local_search: Optional[bool] = None,
     ) -> "oj.sampler.response.Response":
         """Sample Ising model.
 
@@ -158,6 +187,8 @@ class SASampler(BaseSampler):
             sparse (bool): use sparse matrix or not.
             reinitialize_state (bool): if true reinitialize state for each run
             seed (int): seed for Monte Carlo algorithm
+            num_threads (int): number of threads for parallel processing
+            local_search (bool): whether to apply greedy local search after simulated annealing (QUBO only)
         Returns:
             :class:`openjij.sampler.response.Response`: results
 
@@ -184,6 +215,12 @@ class SASampler(BaseSampler):
             sparse = True
         if reinitialize_state is None:
             reinitialize_state = True
+        if num_threads is None:
+            num_threads = self._params.get("num_threads", self.get_default_num_threads())
+        if num_reads is None:
+            num_reads = self._params.get("num_reads", num_threads)
+        if local_search is None:
+            local_search = self._params.get("local_search", False)
 
         _updater_name = updater.lower().replace("_", "").replace(" ", "")
         # swendsen wang algorithm runs only on sparse ising graphs.
@@ -489,6 +526,7 @@ class SASampler(BaseSampler):
         random_number_engine: str = "XORSHIFT",
         seed: Optional[int] = None,
         temperature_schedule: str = "GEOMETRIC",
+        local_search: bool = False,
     ):  
         """Sampling from higher order unconstrainted binary optimization.
 
@@ -496,14 +534,15 @@ class SASampler(BaseSampler):
             J (dict): Interactions.
             vartype (str): "SPIN" or "BINARY".
             num_sweeps (int, optional): The number of sweeps. Defaults to 1000.
-            num_reads (int, optional): The number of reads. Defaults to 1.
-            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to 1.
+            num_reads (int, optional): The number of reads. Defaults to None (uses number of available CPU cores).
+            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to None (uses number of available CPU cores).
             beta_min (float, optional): Minimum beta (initial inverse temperature). Defaults to None.
             beta_max (float, optional): Maximum beta (final inverse temperature). Defaults to None.
             updater (str, optional): Updater. One can choose "METROPOLIS", "HEAT_BATH", or "k-local". Defaults to "METROPOLIS".
             random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
             seed (int, optional): seed for Monte Carlo algorithm. Defaults to None.
             temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
+            local_search (bool, optional): Whether to apply greedy local search after simulated annealing. Only for QUBO problems. Defaults to False.
 
         Returns:
             :class:`openjij.sampler.response.Response`: results
@@ -553,8 +592,10 @@ class SASampler(BaseSampler):
                 update_method=updater,
                 random_number_engine=random_number_engine,
                 seed=seed,
-                temperature_schedule=temperature_schedule
+                temperature_schedule=temperature_schedule,
+                local_search=local_search
             )
+
 
 
 def geometric_ising_beta_schedule(
@@ -573,42 +614,52 @@ def geometric_ising_beta_schedule(
     Returns:
         list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
     """
-
- 
+    linear_term_dE: float = 1.0
+    min_delta_energy = 1.0
+    max_delta_energy = 1.0
     if beta_min is None or beta_max is None:
         # generate Ising matrix (with symmetric form)
         ising_interaction = cxxgraph.get_interactions()
-        abs_ising_interaction = np.abs(ising_interaction)[:-1]
         # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
-        if abs_ising_interaction.shape[0] == 0:
+        if ising_interaction.shape[0] <= 1:
             min_delta_energy = 1
             max_delta_energy = 1
+            linear_term_dE = 1
         else:
-            max_abs_ising_interaction = np.max(abs_ising_interaction)
+            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
+            random_spin[-1, :] = 1  # last element is bias term
+            # calculate delta energy
+            abs_dE = np.abs((2 * ising_interaction @ random_spin * (-2*random_spin)))
 
-            # automatical setting of min, max delta energy
-            abs_bias = np.sum(abs_ising_interaction, axis=1)
+            # Check linear term energy difference
+            linear_term_dE = abs_dE[-1, :].mean()  # last row corresponds to linear term
+
+            abs_dE = abs_dE[:-1, :]  # remove the last element (bias term)
 
             # apply threshold to avoid extremely large beta_max
             THRESHOLD = 1e-8
+            abs_dE = abs_dE[abs_dE >= THRESHOLD]
+            if len(abs_dE) == 0:
+                min_delta_energy = 1
+                max_delta_energy = 1
+            else:
+                # apply threshold to avoid extremely large beta_max
+                min_delta_energy = np.min(abs_dE, axis=0).mean()
+                max_delta_energy = np.mean(abs_dE, axis=0).mean()
 
+    n = ising_interaction.shape[0]  # n+1
 
-            min_delta_energy = np.min(
-                abs_ising_interaction[
-                    abs_ising_interaction > max_abs_ising_interaction * THRESHOLD
-                ]
-            )
-            max_delta_energy = np.max(
-                abs_bias[abs_bias > max_abs_ising_interaction * THRESHOLD]
-            )
-
-    # TODO: More optimal schedule ?
-
-    if beta_min is None:
-        beta_min = np.log(2) / max_delta_energy
     if beta_max is None:
-        beta_max = np.log(100) / min_delta_energy
-
+        # 1 times heat flip accept for 1 sweep in the final state.
+        prob_inv = max(n / 1, 100)
+        beta_max = np.log(prob_inv) / min_delta_energy
+    if beta_min is None:
+        # 10 times heat flip accept for 1 sweep in the initial state.
+        prob_inv = max(n / 10, 2)
+        beta_min = np.log(prob_inv) / max_delta_energy
+        if linear_term_dE / max_delta_energy > 100:
+            # Fast cooling mode
+            beta_min = max(beta_max / 100, beta_min)
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
 
     # set schedule to cxxjij
