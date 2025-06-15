@@ -19,20 +19,24 @@ try:
     cpu_count = multiprocessing.cpu_count()
     print(f"Available CPU cores: {cpu_count}")
     print(f"Default threads from _get_default_num_threads: {default_threads}")
-    assert default_threads == cpu_count, f"Expected {cpu_count}, got {default_threads}"
-    print("✓ _get_default_num_threads() works correctly")
+    
+    # In CI environments, the actual available threads might be limited
+    # So we check that default_threads is reasonable (>= 1 and <= cpu_count)
+    assert default_threads >= 1, f"Default threads should be at least 1, got {default_threads}"
+    assert default_threads <= cpu_count, f"Default threads {default_threads} should not exceed CPU count {cpu_count}"
+    print(f"✓ _get_default_num_threads() returns reasonable value: {default_threads}")
     
     # Test 2: Test base_sample_hubo with None values
     print("\n=== Testing base_sample_hubo with None values ===")
-    hubo = {(0,): -1, (1,): -1, (0, 1): 2}  # Simple HUBO problem
+    hubo = {(0,): -1.0, (1,): -1.0, (0, 1): 2.0}  # Simple HUBO problem
     
-    # Call with None values - should use CPU count
+    # Call with None values - should use CPU count or environment-limited value
     response = base_sample_hubo(
         hubo=hubo,
         vartype="BINARY",
         num_sweeps=100,
-        num_reads=None,  # Should default to CPU count
-        num_threads=None  # Should default to CPU count
+        num_reads=None,  # Should default to same as num_threads
+        num_threads=None  # Should default to available threads
     )
     
     print(f"Response received with {len(response)} samples")
@@ -40,8 +44,8 @@ try:
     
     # Verify the response info contains expected values
     schedule_info = response.info.get('schedule', {})
-    expected_threads = cpu_count
-    expected_reads = cpu_count
+    expected_threads = default_threads  # Use the actual default we got above
+    expected_reads = default_threads    # Should be same as threads
     
     actual_threads = schedule_info.get('num_threads')
     actual_reads = schedule_info.get('num_reads')
@@ -73,6 +77,30 @@ try:
     assert actual_reads2 == 2, f"Expected reads 2, got {actual_reads2}"
     
     print("✓ base_sample_hubo with explicit values works correctly")
+    
+    # Test 4: Test environment variable override
+    print("\n=== Testing environment variable override ===")
+    old_env = os.environ.get('OPENJIJ_NUM_THREADS')
+    try:
+        os.environ['OPENJIJ_NUM_THREADS'] = '2'
+        from importlib import reload
+        import openjij.sampler.base_sa_sample_hubo
+        reload(openjij.sampler.base_sa_sample_hubo)
+        from openjij.sampler.base_sa_sample_hubo import _get_default_num_threads
+        
+        env_threads = _get_default_num_threads()
+        print(f"With OPENJIJ_NUM_THREADS=2, got: {env_threads}")
+        assert env_threads == 2, f"Expected 2 from environment variable, got {env_threads}"
+        print("✓ Environment variable override works correctly")
+        
+    finally:
+        # Restore original environment
+        if old_env is not None:
+            os.environ['OPENJIJ_NUM_THREADS'] = old_env
+        elif 'OPENJIJ_NUM_THREADS' in os.environ:
+            del os.environ['OPENJIJ_NUM_THREADS']
+        # Reload to restore original state
+        reload(openjij.sampler.base_sa_sample_hubo)
     
     print("\n=== All base_sample_hubo tests passed! ===")
     
