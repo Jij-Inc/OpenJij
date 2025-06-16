@@ -89,9 +89,88 @@ $ cd openjij
 $ python -m pip install -vvv .
 ```
 
+### Development Installation (Editable Mode)
+
+For developers who want to make changes to the OpenJij source code, you can install OpenJij in editable mode. This allows you to modify the source code and see the changes without reinstalling the package.
+
+#### Method 1: Direct editable install (Recommended)
+
+```bash
+$ git clone git@github.com:OpenJij/OpenJij.git
+$ cd OpenJij
+$ pip install -e . -v
+```
+
+This will:
+1. Build the C++ extensions using CMake automatically
+2. Install the package in editable mode
+3. Allow you to modify Python code and see changes immediately
+4. Require rebuilding only when C++ code is modified
+
+#### Method 2: Manual C++ build followed by editable install
+
+If you need more control over the build process or want to build C++ components separately:
+
+```bash
+$ git clone git@github.com:OpenJij/OpenJij.git
+$ cd OpenJij
+
+# First, build C++ components manually
+$ mkdir build
+$ cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+$ cmake --build build --parallel
+
+# Then install in editable mode
+$ pip install -e . -v --no-build-isolation
+```
+
+#### Method 3: Development build with debug symbols
+
+For debugging purposes, you can build with debug symbols:
+
+```bash
+$ git clone git@github.com:OpenJij/OpenJij.git
+$ cd OpenJij
+
+# Set environment variable for debug build
+$ export CMAKE_BUILD_TYPE=Debug
+
+# Install in editable mode with debug build
+$ pip install -e . -v
+```
+
+#### Rebuilding after C++ changes
+
+When you modify C++ source files, you need to rebuild the extensions:
+
+```bash
+# Option 1: Reinstall (rebuilds everything)
+$ pip install -e . -v --force-reinstall --no-deps
+
+# Option 2: Manual rebuild and reinstall
+$ rm -rf build/
+$ pip install -e . -v --no-build-isolation
+```
+
+**Note**: Python-only changes (in `openjij/*.py` files) don't require rebuilding, but C++ changes (in `include/`, `openjij/main.cpp`, etc.) require rebuilding the extensions.
+
 ## For Contributor
 
-Use `pre-commit` for auto chech before git commit.
+### Development Setup
+
+For the best development experience, use editable installation mode:
+
+```bash
+$ git clone git@github.com:OpenJij/OpenJij.git
+$ cd OpenJij
+$ python -m venv .venv
+$ source .venv/bin/activate
+$ pip install -e . -v
+```
+
+### Pre-commit Setup
+
+Use `pre-commit` for auto check before git commit.
 `.pre-commit-config.yaml`
 
 ```
@@ -101,9 +180,42 @@ Use `pre-commit` for auto chech before git commit.
 pre-commit install
 ```
 
+### Development Workflow
+
+1. Make changes to Python code - changes are immediately available (no rebuild needed)
+2. Make changes to C++ code - rebuild required:
+   ```bash
+   $ pip install -e . -v --force-reinstall --no-deps
+   ```
+3. Run tests to verify changes:
+   ```bash
+   $ python -m pytest tests/
+   ```
+
 ## Test
 
 ### Python
+
+#### Using editable install (Recommended for development)
+
+```sh
+$ python -m venv .venv
+$ . .venv/bin/activate
+$ pip install pip-tools 
+$ pip-compile setup.cfg
+$ pip-compile dev-requirements.in
+$ pip-sync requirements.txt dev-requirements.txt
+
+# Install in editable mode with debug build for testing
+$ export CMAKE_BUILD_TYPE=Debug
+$ pip install -e . -v
+
+# Run tests
+$ python -m pytest tests/
+$ python -m coverage html
+```
+
+#### Using setup.py (Legacy method)
 
 ```sh
 $ python -m venv .venv
