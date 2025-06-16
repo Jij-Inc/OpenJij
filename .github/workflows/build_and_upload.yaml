@@ -54,9 +54,6 @@ jobs:
          - artifact: wheel-linux_x86_64_python312
            python: /opt/python/cp312-cp312/bin/python
            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
-         - artifact: wheel-linux_x86_64_python313
-           python: /opt/python/cp313-cp313/bin/python
-           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
                
     steps:
       - uses: actions/checkout@v4       
@@ -163,10 +160,6 @@ jobs:
             os: ubuntu-latest
             arch: aarch64
             CIBW_BUILD: cp312-manylinux_aarch64
-          - artifact: wheel-linux_aarch64_python313
-            os: ubuntu-latest
-            arch: aarch64
-            CIBW_BUILD: cp313-manylinux_aarch64
     steps:
       - uses: actions/checkout@v4       
       - name: Set up QEME
