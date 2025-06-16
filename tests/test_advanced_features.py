@@ -249,7 +249,7 @@ def main():
         test_performance_scaling()
         
         print("\n" + "=" * 70)
-        print("🎉 ALL ADVANCED TESTS PASSED! 🎉")
+        print("*** ALL ADVANCED TESTS PASSED! ***")
         print("[OK] Batch-wise parallel processing works correctly across all configurations")
         print("[OK] Local search consistently improves solution quality")
         print("[OK] Parallel execution is deterministic and consistent")
@@ -257,7 +257,7 @@ def main():
         print("=" * 70)
         
     except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+        print(f"\n*** Test failed with error: {e}")
         import traceback
         traceback.print_exc()
         raise

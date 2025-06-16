@@ -174,7 +174,7 @@ def test_combined_features():
         print(f"Case {i+1}: threads={config['num_threads']}, "
               f"reads={config['num_reads']}, "
               f"local_search={config['local_search']}")
-        print(f"  → Time: {result['time']:.4f}s, Best: {result['best_energy']:.6f}")
+        print(f"  -> Time: {result['time']:.4f}s, Best: {result['best_energy']:.6f}")
     
     print("[OK] Combined features test passed!")
 
@@ -189,14 +189,14 @@ def main():
         test_combined_features()
         
         print("\n" + "=" * 60)
-        print("🎉 ALL TESTS PASSED! 🎉")
+        print("*** ALL TESTS PASSED! ***")
         print("[OK] Batch-wise parallel processing is working correctly")
         print("[OK] Greedy local search is working correctly")
         print("[OK] Combined features work well together")
         print("=" * 60)
         
     except Exception as e:
-        print(f"\n❌ Test failed with error: {e}")
+        print(f"\n*** Test failed with error: {e}")
         raise
 
 if __name__ == "__main__":

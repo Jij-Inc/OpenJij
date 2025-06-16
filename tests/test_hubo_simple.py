@@ -117,6 +117,6 @@ if __name__ == "__main__":
     try:
         test_hubo_functionality()
     except Exception as e:
-        print(f"\n❌ Test failed: {e}")
+        print(f"\n*** Test failed: {e}")
         import traceback
         traceback.print_exc()
