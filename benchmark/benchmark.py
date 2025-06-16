@@ -2,10 +2,23 @@
 # でのベンチマーク用のスクリプト
 # sparse は遅すぎるのでベンチマーク測定できない
 
+# %%
 import openjij as oj
 import neal
+
+# %%
 import numpy as np
 import time
+import matplotlib.pyplot as plt
+
+# %%
+r = np.linspace(0.01, 0.99, 100)
+plt.plot(r, np.log(-np.log(r)))
+plt.grid()
+plt.show()
+
+# %%
+
 
 n = 1000
 h, J = {}, {}
