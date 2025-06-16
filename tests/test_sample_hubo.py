@@ -38,7 +38,7 @@ try:
     assert len(response) <= cpu_count, f"Expected at most {cpu_count} samples, got {len(response)}"
     print(f"Got {len(response)} samples from {cpu_count} available cores - this is reasonable")
     
-    print("✓ SASampler.sample_hubo with None values works correctly")
+    print("[OK] SASampler.sample_hubo with None values works correctly")
     
     # Test sample_hubo with explicit values
     print("\n=== Testing SASampler.sample_hubo with explicit values ===")
@@ -53,7 +53,7 @@ try:
     print(f"Response received with {len(response2)} samples")
     assert len(response2) == 3, f"Expected 3 samples, got {len(response2)}"
     
-    print("✓ SASampler.sample_hubo with explicit values works correctly")
+    print("[OK] SASampler.sample_hubo with explicit values works correctly")
     
     print("\n=== All sample_hubo tests passed! ===")
     

@@ -42,7 +42,7 @@ def test_parallel_processing():
         # Verify we got the expected number of samples
         assert len(response.samples()) == config['num_reads'], f"Expected {config['num_reads']} samples, got {len(response.samples())}"
         
-    print("✓ Parallel processing test passed!")
+    print("[OK] Parallel processing test passed!")
 
 def test_local_search():
     """Test local search functionality."""
@@ -105,7 +105,7 @@ def test_local_search():
     # Local search should generally produce better or equal results
     assert min(energies_with_ls) <= min(energies_no_ls), "Local search should not worsen the best solution"
     
-    print("✓ Local search test passed!")
+    print("[OK] Local search test passed!")
 
 def test_combined_features():
     """Test both parallel processing and local search together."""
@@ -176,7 +176,7 @@ def test_combined_features():
               f"local_search={config['local_search']}")
         print(f"  → Time: {result['time']:.4f}s, Best: {result['best_energy']:.6f}")
     
-    print("✓ Combined features test passed!")
+    print("[OK] Combined features test passed!")
 
 def main():
     """Main test function."""
@@ -190,9 +190,9 @@ def main():
         
         print("\n" + "=" * 60)
         print("🎉 ALL TESTS PASSED! 🎉")
-        print("✓ Batch-wise parallel processing is working correctly")
-        print("✓ Greedy local search is working correctly")
-        print("✓ Combined features work well together")
+        print("[OK] Batch-wise parallel processing is working correctly")
+        print("[OK] Greedy local search is working correctly")
+        print("[OK] Combined features work well together")
         print("=" * 60)
         
     except Exception as e:

@@ -8,7 +8,7 @@ import sys
 import os
 
 # Add the current directory to Python path to import openjij
-sys.path.insert(0, '/Users/yuyamashiro/workspace/OpenJij')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from openjij.sampler.base_sa_sample_hubo import base_sample_hubo, _get_default_num_threads
@@ -24,7 +24,7 @@ try:
     # So we check that default_threads is reasonable (>= 1 and <= cpu_count)
     assert default_threads >= 1, f"Default threads should be at least 1, got {default_threads}"
     assert default_threads <= cpu_count, f"Default threads {default_threads} should not exceed CPU count {cpu_count}"
-    print(f"✓ _get_default_num_threads() returns reasonable value: {default_threads}")
+    print(f"[OK] _get_default_num_threads() returns reasonable value: {default_threads}")
     
     # Test 2: Test base_sample_hubo with None values
     print("\n=== Testing base_sample_hubo with None values ===")
@@ -56,7 +56,7 @@ try:
     assert actual_threads == expected_threads, f"Expected threads {expected_threads}, got {actual_threads}"
     assert actual_reads == expected_reads, f"Expected reads {expected_reads}, got {actual_reads}"
     
-    print("✓ base_sample_hubo with None values works correctly")
+    print("[OK] base_sample_hubo with None values works correctly")
     
     # Test 3: Test base_sample_hubo with explicit values
     print("\n=== Testing base_sample_hubo with explicit values ===")
@@ -76,7 +76,7 @@ try:
     assert actual_threads2 == 1, f"Expected threads 1, got {actual_threads2}"
     assert actual_reads2 == 2, f"Expected reads 2, got {actual_reads2}"
     
-    print("✓ base_sample_hubo with explicit values works correctly")
+    print("[OK] base_sample_hubo with explicit values works correctly")
     
     # Test 4: Test environment variable override
     print("\n=== Testing environment variable override ===")
@@ -91,7 +91,7 @@ try:
         env_threads = _get_default_num_threads()
         print(f"With OPENJIJ_NUM_THREADS=2, got: {env_threads}")
         assert env_threads == 2, f"Expected 2 from environment variable, got {env_threads}"
-        print("✓ Environment variable override works correctly")
+        print("[OK] Environment variable override works correctly")
         
     finally:
         # Restore original environment

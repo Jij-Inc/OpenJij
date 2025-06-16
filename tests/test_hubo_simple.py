@@ -108,9 +108,9 @@ def test_hubo_functionality():
     print(f"   Energy std: {np.std(energies):.6f}")
     
     print("\n" + "=" * 50)
-    print("✓ All tests completed successfully!")
-    print("✓ Batch-wise parallelization is working")
-    print("✓ Local search is working") 
+    print("[OK] All tests completed successfully!")
+    print("[OK] Batch-wise parallelization is working")
+    print("[OK] Local search is working") 
     print("=" * 50)
 
 if __name__ == "__main__":

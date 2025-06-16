@@ -250,10 +250,10 @@ def main():
         
         print("\n" + "=" * 70)
         print("🎉 ALL ADVANCED TESTS PASSED! 🎉")
-        print("✓ Batch-wise parallel processing works correctly across all configurations")
-        print("✓ Local search consistently improves solution quality")
-        print("✓ Parallel execution is deterministic and consistent")
-        print("✓ Performance scaling behaves as expected")
+        print("[OK] Batch-wise parallel processing works correctly across all configurations")
+        print("[OK] Local search consistently improves solution quality")
+        print("[OK] Parallel execution is deterministic and consistent")
+        print("[OK] Performance scaling behaves as expected")
         print("=" * 70)
         
     except Exception as e:
