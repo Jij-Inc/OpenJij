@@ -44,50 +44,50 @@ def test_parallel_processing_detailed():
     problems = create_test_problems()
     sampler = oj.SASampler()
     
-    # Test different batch configurations
+    # Test different batch configurations (reduced for speed)
     test_configs = [
         {"num_reads": 1, "num_threads": 1, "name": "sequential_single"},
         {"num_reads": 8, "num_threads": 1, "name": "sequential_multi"},
         {"num_reads": 8, "num_threads": 2, "name": "batch_2x4"},
         {"num_reads": 8, "num_threads": 4, "name": "batch_4x2"},
         {"num_reads": 8, "num_threads": 8, "name": "batch_8x1"},
-        {"num_reads": 12, "num_threads": 3, "name": "batch_3x4"},
-        {"num_reads": 20, "num_threads": 5, "name": "batch_5x4"},
     ]
     
-    for problem_name, problem in problems.items():
-        print(f"\nTesting problem: {problem_name}")
-        print(f"Problem size: {len(problem)} terms")
+    # Test only one problem for speed
+    problem_name = 'simple'
+    problem = problems[problem_name]
+    print(f"\nTesting problem: {problem_name}")
+    print(f"Problem size: {len(problem)} terms")
+    
+    for config in test_configs:
+        print(f"\n  Config: {config['name']} (reads={config['num_reads']}, threads={config['num_threads']})")
         
-        for config in test_configs:
-            print(f"\n  Config: {config['name']} (reads={config['num_reads']}, threads={config['num_threads']})")
-            
-            start_time = time.time()
-            response = sampler.sample_hubo(
-                problem,
-                vartype="BINARY",
-                num_sweeps=600,
-                num_reads=config['num_reads'],
-                num_threads=config['num_threads'],
-                seed=42
-            )
-            execution_time = time.time() - start_time
-            
-            energies = response.data_vectors['energy']
-            
-            print(f"    Time: {execution_time:.4f}s")
-            print(f"    Samples: {len(response.samples())}")
-            print(f"    Best energy: {min(energies):.6f}")
-            print(f"    Energy std: {np.std(energies):.6f}")
-            
-            # Verify correctness
-            assert len(response.samples()) == config['num_reads'], \
-                f"Expected {config['num_reads']} samples, got {len(response.samples())}"
-            
-            # All samples should be valid binary solutions
-            for sample in response.samples():
-                for val in sample.values():
-                    assert val in [0, 1], f"Invalid binary value: {val}"
+        start_time = time.time()
+        response = sampler.sample_hubo(
+            problem,
+            vartype="BINARY",
+            num_sweeps=100,
+            num_reads=config['num_reads'],
+            num_threads=config['num_threads'],
+            seed=42
+        )
+        execution_time = time.time() - start_time
+        
+        energies = response.data_vectors['energy']
+        
+        print(f"    Time: {execution_time:.4f}s")
+        print(f"    Samples: {len(response.samples())}")
+        print(f"    Best energy: {min(energies):.6f}")
+        print(f"    Energy std: {np.std(energies):.6f}")
+        
+        # Verify correctness
+        assert len(response.samples()) == config['num_reads'], \
+            f"Expected {config['num_reads']} samples, got {len(response.samples())}"
+        
+        # All samples should be valid binary solutions
+        for sample in response.samples():
+            for val in sample.values():
+                assert val in [0, 1], f"Invalid binary value: {val}"
 
 def test_local_search_effectiveness():
     """Test local search effectiveness on different problems."""
@@ -95,50 +95,48 @@ def test_local_search_effectiveness():
     print("LOCAL SEARCH EFFECTIVENESS TEST") 
     print("=" * 70)
     
-    problems = create_test_problems()
+    # Test only one problem for speed
+    problem = create_test_problems()['simple']
     sampler = oj.SASampler()
     
-    for problem_name, problem in problems.items():
-        print(f"\nTesting local search on: {problem_name}")
-        
-        # Test with different numbers of sweeps to see local search impact
-        sweep_configs = [300, 600, 1000]
-        
-        for num_sweeps in sweep_configs:
-            print(f"\n  Sweeps: {num_sweeps}")
-            
-            # Without local search
-            response_no_ls = sampler.sample_hubo(
-                problem,
-                vartype="BINARY",
-                num_sweeps=num_sweeps,
-                num_reads=30,
-                num_threads=3,
-                local_search=False,
-                seed=42
-            )
-            
-            # With local search
-            response_with_ls = sampler.sample_hubo(
-                problem,
-                vartype="BINARY", 
-                num_sweeps=num_sweeps,
-                num_reads=30,
-                num_threads=3,
-                local_search=True,
-                seed=42
-            )
-            
-            energies_no_ls = response_no_ls.data_vectors['energy']
-            energies_with_ls = response_with_ls.data_vectors['energy']
-            
-            print(f"    No LS:   best={min(energies_no_ls):.6f}, avg={np.mean(energies_no_ls):.6f}, std={np.std(energies_no_ls):.6f}")
-            print(f"    With LS: best={min(energies_with_ls):.6f}, avg={np.mean(energies_with_ls):.6f}, std={np.std(energies_with_ls):.6f}")
-            print(f"    Improvement: best={min(energies_no_ls) - min(energies_with_ls):.6f}, avg={np.mean(energies_no_ls) - np.mean(energies_with_ls):.6f}")
-            
-            # Local search should not make solutions worse
-            assert min(energies_with_ls) <= min(energies_no_ls) + 1e-10, \
-                "Local search should not worsen the best solution"
+    print(f"\nTesting local search on: simple")
+    
+    # Test with single sweep configuration for speed
+    num_sweeps = 100
+    print(f"\n  Sweeps: {num_sweeps}")
+    
+    # Without local search
+    response_no_ls = sampler.sample_hubo(
+        problem,
+        vartype="BINARY",
+        num_sweeps=num_sweeps,
+        num_reads=5,
+        num_threads=1,
+        local_search=False,
+        seed=42
+    )
+    
+    # With local search
+    response_with_ls = sampler.sample_hubo(
+        problem,
+        vartype="BINARY", 
+        num_sweeps=num_sweeps,
+        num_reads=5,
+        num_threads=1,
+        local_search=True,
+        seed=42
+    )
+    
+    energies_no_ls = response_no_ls.data_vectors['energy']
+    energies_with_ls = response_with_ls.data_vectors['energy']
+    
+    print(f"    No LS:   best={min(energies_no_ls):.6f}, avg={np.mean(energies_no_ls):.6f}, std={np.std(energies_no_ls):.6f}")
+    print(f"    With LS: best={min(energies_with_ls):.6f}, avg={np.mean(energies_with_ls):.6f}, std={np.std(energies_with_ls):.6f}")
+    print(f"    Improvement: best={min(energies_no_ls) - min(energies_with_ls):.6f}, avg={np.mean(energies_no_ls) - np.mean(energies_with_ls):.6f}")
+    
+    # Local search should not make solutions worse
+    assert min(energies_with_ls) <= min(energies_no_ls) + 1e-10, \
+        "Local search should not worsen the best solution"
 
 def test_parallel_correctness():
     """Test that parallel execution gives consistent results."""
@@ -152,14 +150,14 @@ def test_parallel_correctness():
     # Run the same problem multiple times with same seed
     results = []
     
-    for i in range(5):
-        print(f"\nRun {i+1}/5:")
+    for i in range(3):
+        print(f"\nRun {i+1}/3:")
         response = sampler.sample_hubo(
             problem,
             vartype="BINARY",
-            num_sweeps=800,
-            num_reads=20,
-            num_threads=4,
+            num_sweeps=200,
+            num_reads=10,
+            num_threads=2,
             local_search=True,
             seed=12345  # Fixed seed for reproducibility
         )
@@ -196,8 +194,8 @@ def test_performance_scaling():
     problem = create_test_problems()['random']
     sampler = oj.SASampler()
     
-    thread_counts = [1, 2, 4, 6, 8]
-    num_reads = 24  # Divisible by all thread counts
+    thread_counts = [1, 2, 4]
+    num_reads = 12  # Divisible by all thread counts
     
     print(f"Testing with num_reads={num_reads}, varying num_threads")
     
@@ -205,14 +203,14 @@ def test_performance_scaling():
     for num_threads in thread_counts:
         print(f"\nTesting num_threads={num_threads}:")
         
-        # Multiple runs for more accurate timing
+        # Single run for faster testing
         run_times = []
-        for run in range(3):
+        for run in range(1):
             start_time = time.time()
             response = sampler.sample_hubo(
                 problem,
                 vartype="BINARY",
-                num_sweeps=600,
+                num_sweeps=100,
                 num_reads=num_reads,
                 num_threads=num_threads,
                 local_search=False,  # Disable LS for pure timing

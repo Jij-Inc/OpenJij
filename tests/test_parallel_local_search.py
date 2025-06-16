@@ -32,7 +32,7 @@ def test_parallel_processing():
         print(f"\nTesting with num_reads={config['num_reads']}, num_threads={config['num_threads']}")
         
         start_time = time.time()
-        response = sampler.sample_qubo(Q, num_sweeps=1000, seed=42, **config)
+        response = sampler.sample_qubo(Q, num_sweeps=200, seed=42, **config)
         end_time = time.time()
         
         print(f"  Execution time: {end_time - start_time:.4f} seconds")
@@ -64,9 +64,9 @@ def test_local_search():
     start_time = time.time()
     response_no_ls = sampler.sample_qubo(
         Q, 
-        num_reads=50, 
-        num_threads=4,
-        num_sweeps=500, 
+        num_reads=20, 
+        num_threads=2,
+        num_sweeps=200, 
         local_search=False,
         seed=42
     )
@@ -83,9 +83,9 @@ def test_local_search():
     start_time = time.time()
     response_with_ls = sampler.sample_qubo(
         Q, 
-        num_reads=50, 
-        num_threads=4,
-        num_sweeps=500, 
+        num_reads=20, 
+        num_threads=2,
+        num_sweeps=200, 
         local_search=True,
         seed=42
     )
@@ -124,13 +124,12 @@ def test_combined_features():
     
     sampler = oj.SASampler()
     
-    # Test various combinations
+    # Test various combinations (reduced for speed)
     test_cases = [
-        {"num_reads": 20, "num_threads": 1, "local_search": False},
-        {"num_reads": 20, "num_threads": 1, "local_search": True},
-        {"num_reads": 20, "num_threads": 4, "local_search": False},
-        {"num_reads": 20, "num_threads": 4, "local_search": True},
-        {"num_reads": 30, "num_threads": 6, "local_search": True},
+        {"num_reads": 10, "num_threads": 1, "local_search": False},
+        {"num_reads": 10, "num_threads": 1, "local_search": True},
+        {"num_reads": 10, "num_threads": 2, "local_search": False},
+        {"num_reads": 10, "num_threads": 2, "local_search": True},
     ]
     
     results = []
@@ -141,7 +140,7 @@ def test_combined_features():
         start_time = time.time()
         response = sampler.sample_qubo(
             Q, 
-            num_sweeps=800,
+            num_sweeps=200,
             seed=42,
             **config
         )

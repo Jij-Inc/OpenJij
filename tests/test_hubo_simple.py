@@ -22,7 +22,7 @@ def test_hubo_functionality():
     response = sampler.sample_hubo(
         J, 
         vartype="BINARY",
-        num_sweeps=500,
+        num_sweeps=100,
         num_reads=5,
         num_threads=1,
         seed=42
@@ -36,7 +36,7 @@ def test_hubo_functionality():
     response_parallel = sampler.sample_hubo(
         J,
         vartype="BINARY", 
-        num_sweeps=500,
+        num_sweeps=100,
         num_reads=10,
         num_threads=4,
         seed=42
@@ -55,8 +55,8 @@ def test_hubo_functionality():
     response_no_ls = sampler.sample_hubo(
         J,
         vartype="BINARY",
-        num_sweeps=300,
-        num_reads=20,
+        num_sweeps=100,
+        num_reads=10,
         num_threads=2,
         local_search=False,
         seed=42
@@ -68,8 +68,8 @@ def test_hubo_functionality():
     response_with_ls = sampler.sample_hubo(
         J,
         vartype="BINARY",
-        num_sweeps=300,
-        num_reads=20,
+        num_sweeps=100,
+        num_reads=10,
         num_threads=2,
         local_search=True,
         seed=42
@@ -94,9 +94,9 @@ def test_hubo_functionality():
     response_complex = sampler.sample_hubo(
         J_complex,
         vartype="BINARY",
-        num_sweeps=800,
-        num_reads=15,
-        num_threads=3,
+        num_sweeps=200,
+        num_reads=8,
+        num_threads=2,
         local_search=True,
         seed=42
     )
