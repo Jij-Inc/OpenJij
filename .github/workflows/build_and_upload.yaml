@@ -175,6 +175,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_BUILD: ${{matrix.CIBW_BUILD}}
+          CIBW_SKIP: "cp313-*"
           CIBW_ENVIRONMENT: ""
           CIBW_PLATFORM:  linux
           CIBW_ARCHS: ${{matrix.arch}}
@@ -188,7 +189,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: >
                source scl_source enable gcc-toolset-11 &&
                pip install pybind11 cmake ninja
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
@@ -223,10 +224,11 @@ jobs:
       - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
         uses: pypa/cibuildwheel@v2.22.0
         env:
+          CIBW_SKIP: "cp313-*"
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
@@ -281,10 +283,11 @@ jobs:
       - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
         uses: pypa/cibuildwheel@v2.22.0
         env:
+          CIBW_SKIP: "cp313-*"
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
           
       - uses: actions/upload-artifact@v4
         with:
@@ -307,7 +310,7 @@ jobs:
           merge-multiple: true
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages_dir: ./dist
-          verify_metadata: true
-          skip_existing: false
+          packages-dir: ./dist
+          verify-metadata: true
+          skip-existing: false
           verbose: true
