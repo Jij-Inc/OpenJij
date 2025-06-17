@@ -315,6 +315,71 @@ class TestSamplers(unittest.TestCase):
         self.assertEqual(len(res.states), 2)
         self.assertEqual(len(res.energies), 2)
 
+    def test_sa_beta_parameters(self):
+        """Test SASampler with both beta_min and beta_max parameters"""
+        sampler = oj.SASampler()
+        
+        # Test with both beta_min and beta_max specified
+        beta_min = 0.1
+        beta_max = 5.0
+        
+        # Test sample_qubo with beta parameters
+        response = sampler.sample_qubo(
+            self.qubo, 
+            beta_min=beta_min, 
+            beta_max=beta_max,
+            num_sweeps=100, 
+            num_reads=5,
+            seed=42
+        )
+        
+        # Verify that the response is valid using existing test method
+        self._test_response(response, self.e_q)
+        self.assertEqual(len(response.record.sample), 5)  # num_reads
+        
+        # Check that schedule information is properly set
+        schedule_info = response.info.get('schedule', {})
+        self.assertIn('beta_min', schedule_info)
+        self.assertIn('beta_max', schedule_info)
+        
+        # Verify beta values are as expected
+        self.assertAlmostEqual(schedule_info['beta_min'], beta_min, places=5)
+        self.assertAlmostEqual(schedule_info['beta_max'], beta_max, places=5)
+        
+        # Test sample_ising with beta parameters
+        response_ising = sampler.sample_ising(
+            self.num_ind['h'], 
+            self.num_ind['J'],
+            beta_min=beta_min,
+            beta_max=beta_max,
+            num_sweeps=100,
+            num_reads=3,
+            seed=42
+        )
+        
+        # Verify ising response
+        self._test_response(response_ising, self.e_g)
+        self.assertEqual(len(response_ising.record.sample), 3)
+        
+        # Test with different beta values
+        response_different = sampler.sample_qubo(
+            self.qubo,
+            beta_min=1.0,
+            beta_max=10.0,
+            num_sweeps=50,
+            num_reads=2
+        )
+        
+        self._test_response(response_different, self.e_q)
+        self.assertEqual(len(response_different.record.sample), 2)
+        
+        # Verify different beta values are set correctly
+        schedule_different = response_different.info.get('schedule', {})
+        self.assertAlmostEqual(schedule_different['beta_min'], 1.0, places=5)
+        self.assertAlmostEqual(schedule_different['beta_max'], 10.0, places=5)
+        
+        print("[OK] SASampler with beta_min and beta_max parameters works correctly")
+
 
 if __name__ == '__main__':
     unittest.main()
