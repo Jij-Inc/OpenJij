@@ -615,9 +615,9 @@ def geometric_ising_beta_schedule(
         # 10 times heat flip accept for 1 sweep in the initial state.
         prob_inv = max(n / 10, 2)
         beta_min = np.log(prob_inv) / max_delta_energy
-        if linear_term_dE / max_delta_energy > 100:
+        if linear_term_dE / max_delta_energy > 50:
             # Fast cooling mode
-            beta_min = max(beta_max / 100, beta_min)
+            beta_min = max(beta_max / 20, beta_min)
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
 
     # set schedule to cxxjij
