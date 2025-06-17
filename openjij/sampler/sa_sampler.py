@@ -19,8 +19,6 @@ except ImportError:
 import cimod
 import dimod
 import numpy as np
-import multiprocessing
-import os
 
 from dimod import BINARY, SPIN
 
@@ -65,23 +63,6 @@ class SASampler(BaseSampler):
         - beta is less than zero.
     """
 
-    @staticmethod
-    def get_default_num_threads():
-        """利用可能なCPUコア数を取得してデフォルト値として返す"""
-        try:
-            # 環境変数での制御も可能にする
-            if 'OPENJIJ_NUM_THREADS' in os.environ:
-                return int(os.environ['OPENJIJ_NUM_THREADS'])
-            if 'OMP_NUM_THREADS' in os.environ:
-                return int(os.environ['OMP_NUM_THREADS'])
-            
-            # CPUコア数を取得
-            cpu_count = multiprocessing.cpu_count()
-            return cpu_count
-        except:
-            # 何らかのエラーが発生した場合は1を返す
-            return 1
-
     @property
     def parameters(self):
         return {
@@ -91,18 +72,12 @@ class SASampler(BaseSampler):
 
     def __init__(self):
 
-        # Get dynamic default values based on system capabilities
-        default_num_threads = self.get_default_num_threads()
-        default_num_reads = default_num_threads  # Set num_reads to be same as num_threads
-
         # Set default parameters
         num_sweeps = 1000
-        num_reads = default_num_reads
+        num_reads = 1
         beta_min = None
         beta_max = None
         schedule = None
-        local_search = False
-        num_threads = default_num_threads
 
         self._default_params = {
             "beta_min": beta_min,
@@ -110,8 +85,6 @@ class SASampler(BaseSampler):
             "num_sweeps": num_sweeps,
             "schedule": schedule,
             "num_reads": num_reads,
-            "local_search": local_search,
-            "num_threads": num_threads,
         }
 
         self._params = self._default_params.copy()
@@ -170,8 +143,6 @@ class SASampler(BaseSampler):
         sparse: Optional[bool] = None,
         reinitialize_state: Optional[bool] = None,
         seed: Optional[int] = None,
-        num_threads: Optional[int] = None,
-        local_search: Optional[bool] = None,
     ) -> "oj.sampler.response.Response":
         """Sample Ising model.
 
@@ -187,8 +158,6 @@ class SASampler(BaseSampler):
             sparse (bool): use sparse matrix or not.
             reinitialize_state (bool): if true reinitialize state for each run
             seed (int): seed for Monte Carlo algorithm
-            num_threads (int): number of threads for parallel processing
-            local_search (bool): whether to apply greedy local search after simulated annealing (QUBO only)
         Returns:
             :class:`openjij.sampler.response.Response`: results
 
@@ -215,12 +184,6 @@ class SASampler(BaseSampler):
             sparse = True
         if reinitialize_state is None:
             reinitialize_state = True
-        if num_threads is None:
-            num_threads = self._params.get("num_threads", self.get_default_num_threads())
-        if num_reads is None:
-            num_reads = self._params.get("num_reads", num_threads)
-        if local_search is None:
-            local_search = self._params.get("local_search", False)
 
         _updater_name = updater.lower().replace("_", "").replace(" ", "")
         # swendsen wang algorithm runs only on sparse ising graphs.
@@ -518,15 +481,14 @@ class SASampler(BaseSampler):
         J: dict[tuple, float],
         vartype: Optional[str] = None,
         num_sweeps: int = 1000,
-        num_reads: Optional[int] = None,
-        num_threads: Optional[int] = None,
+        num_reads: int = 1,
+        num_threads: int = 1,
         beta_min: Optional[float] = None,
         beta_max: Optional[float] = None,
         updater: str = "METROPOLIS",
         random_number_engine: str = "XORSHIFT",
         seed: Optional[int] = None,
         temperature_schedule: str = "GEOMETRIC",
-        local_search: bool = False,
     ):  
         """Sampling from higher order unconstrainted binary optimization.
 
@@ -534,15 +496,14 @@ class SASampler(BaseSampler):
             J (dict): Interactions.
             vartype (str): "SPIN" or "BINARY".
             num_sweeps (int, optional): The number of sweeps. Defaults to 1000.
-            num_reads (int, optional): The number of reads. Defaults to None (uses number of available CPU cores).
-            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to None (uses number of available CPU cores).
+            num_reads (int, optional): The number of reads. Defaults to 1.
+            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to 1.
             beta_min (float, optional): Minimum beta (initial inverse temperature). Defaults to None.
             beta_max (float, optional): Maximum beta (final inverse temperature). Defaults to None.
             updater (str, optional): Updater. One can choose "METROPOLIS", "HEAT_BATH", or "k-local". Defaults to "METROPOLIS".
             random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
             seed (int, optional): seed for Monte Carlo algorithm. Defaults to None.
             temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
-            local_search (bool, optional): Whether to apply greedy local search after simulated annealing. Only for QUBO problems. Defaults to False.
 
         Returns:
             :class:`openjij.sampler.response.Response`: results
@@ -559,12 +520,6 @@ class SASampler(BaseSampler):
                 >>> response = sampler.sample_hubo(J, "BINARY")
         """
 
-
-        # Set default values for num_reads and num_threads if None
-        if num_reads is None:
-            num_reads = self._default_params["num_reads"]
-        if num_threads is None:
-            num_threads = self._default_params["num_threads"]
 
         if updater=="k-local" or not isinstance(J, dict):
             # To preserve the correspondence with the old version.
@@ -598,11 +553,8 @@ class SASampler(BaseSampler):
                 update_method=updater,
                 random_number_engine=random_number_engine,
                 seed=seed,
-                temperature_schedule=temperature_schedule,
-                local_search=local_search
+                temperature_schedule=temperature_schedule
             )
-
-
 
 def geometric_ising_beta_schedule(
     cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
@@ -623,9 +575,9 @@ def geometric_ising_beta_schedule(
     linear_term_dE: float = 1.0
     min_delta_energy = 1.0
     max_delta_energy = 1.0
+    # generate Ising matrix (with symmetric form)
+    ising_interaction = cxxgraph.get_interactions()
     if beta_min is None or beta_max is None:
-        # generate Ising matrix (with symmetric form)
-        ising_interaction = cxxgraph.get_interactions()
         # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
         if ising_interaction.shape[0] <= 1:
             min_delta_energy = 1
@@ -663,9 +615,9 @@ def geometric_ising_beta_schedule(
         # 10 times heat flip accept for 1 sweep in the initial state.
         prob_inv = max(n / 10, 2)
         beta_min = np.log(prob_inv) / max_delta_energy
-        if linear_term_dE / max_delta_energy > 100:
+        if linear_term_dE / max_delta_energy > 50:
             # Fast cooling mode
-            beta_min = max(beta_max / 100, beta_min)
+            beta_min = max(beta_max / 20, beta_min)
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
 
     # set schedule to cxxjij

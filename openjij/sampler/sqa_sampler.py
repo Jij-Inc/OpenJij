@@ -56,8 +56,8 @@ class SQASampler(BaseSampler):
     def __init__(self):
 
         # Set default parameters
-        beta = 5.0
-        gamma = 1.0
+        beta = None
+        gamma = None
         num_sweeps = 1000
         num_reads = 1
         schedule = None
@@ -87,7 +87,7 @@ class SQASampler(BaseSampler):
         }
 
     def _convert_validation_schedule(self, schedule, beta):
-        if not isinstance(schedule, (list, np.array)):
+        if not isinstance(schedule, (list, np.ndarray)):
             raise ValueError("schedule should be list or numpy.array")
 
         if isinstance(schedule[0], cxxjij.utility.TransverseFieldSchedule):
@@ -219,11 +219,13 @@ class SQASampler(BaseSampler):
 
         # set annealing schedule -------------------------------
         self._annealing_schedule_setting(
-            bqm,
-            self._params["beta"],
-            self._params["gamma"],
-            self._params["num_sweeps"],
-            self._params["schedule"],
+            model=bqm,
+            ising_graph=ising_graph,
+            trotter=self._params["trotter"],
+            beta=self._params["beta"],
+            gamma=self._params["gamma"],
+            num_sweeps=self._params["num_sweeps"],
+            schedule=self._params["schedule"],
         )
         # ------------------------------- set annealing schedule
 
@@ -290,15 +292,17 @@ class SQASampler(BaseSampler):
         return response
 
     def _annealing_schedule_setting(
-        self, model, beta=None, gamma=None, num_sweeps=None, schedule=None
+        self, model, ising_graph, trotter: int, beta=None, gamma=None, num_sweeps=None, schedule=None
     ):
+        beta_min, beta_max, gamma = estimate_beta_schedule(ising_graph, beta, gamma, trotter=trotter)
+        self._params["gamma"] = gamma
+        self._params["beta"] = beta_max
         if schedule:
-            self._params["schedule"] = self._convert_validation_schedule(schedule, beta)
+            self._params["schedule"] = self._convert_validation_schedule(schedule, beta_max)
             self.schedule_info = {"schedule": "custom schedule"}
         else:
-
             self._params["schedule"], beta_gamma = quartic_ising_schedule(
-                model=model, beta=beta, gamma=gamma, num_sweeps=num_sweeps
+                model=model, beta_min=beta_min, beta_max=beta_max, gamma=gamma, num_sweeps=num_sweeps
             )
             self.schedule_info = {
                 "beta": beta_gamma[0],
@@ -327,7 +331,7 @@ def linear_ising_schedule(model, beta, gamma, num_sweeps):
 # TODO: more optimal schedule?
 
 
-def quartic_ising_schedule(model, beta, gamma, num_sweeps):
+def quartic_ising_schedule(model, beta_min, beta_max, gamma, num_sweeps):
     """Generate quartic ising schedule based on S
 
     Morita and H. Nishimori,
@@ -341,8 +345,82 @@ def quartic_ising_schedule(model, beta, gamma, num_sweeps):
     Returns:
         generated schedule
     """
-
+    beta_geo = np.geomspace(beta_min, beta_max, num_sweeps).tolist()
     s = np.linspace(0, 1, num_sweeps)
-    fs = s**4 * (35 - 84 * s + 70 * s**2 - 20 * s**3)
-    schedule = [((beta, elem), 1) for elem in fs]
-    return schedule, [beta, gamma]
+    # fs = s**4 * (35 - 84 * s + 70 * s**2 - 20 * s**3)
+    n = 10
+    fs = 1/2 + (2*s - 1) / (2 * np.sqrt(n - (n-1)*((2*s-1)**2)))
+    schedule = [((elem, beta_geo[i]), 1) for i, elem in enumerate(fs)]
+    return schedule, [beta_max, gamma]
+
+
+def estimate_beta_schedule(
+    cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
+    beta: Optional[float],
+    gamma: Optional[float],
+    trotter: int,
+) -> tuple[float, float, float]:
+    linear_term_dE: float = 1.0
+    min_delta_energy = 1.0
+    max_delta_energy = 1.0
+
+    # generate Ising matrix (with symmetric form)
+    ising_interaction = cxxgraph.get_interactions()
+    n = ising_interaction.shape[0]  # n+1
+
+    if beta is not None:
+        if gamma is None:
+            p = min(10.0 / n, 0.1)
+            _gamma = np.arctanh(p) / (2*beta)
+            return (beta*10.0, beta, _gamma)
+        return (beta*10.0, beta, gamma)
+    else:
+        # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
+        if ising_interaction.shape[0] <= 1:
+            min_delta_energy = 1
+            max_delta_energy = 1
+            linear_term_dE = 1
+        else:
+            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
+            random_spin[-1, :] = 1  # last element is bias term
+            # calculate delta energy
+            abs_dE = np.abs((2 * ising_interaction @ random_spin * (-2*random_spin)))
+
+            # Check linear term energy difference
+            linear_term_dE = abs_dE[-1, :].mean()  # last row corresponds to linear term
+
+            abs_dE = abs_dE[:-1, :]  # remove the last element (bias term)
+
+            # apply threshold to avoid extremely large beta_max
+            THRESHOLD = 1e-8
+            abs_dE = abs_dE[abs_dE >= THRESHOLD]
+            if len(abs_dE) == 0:
+                min_delta_energy = 1
+                max_delta_energy = 1
+            else:
+                # apply threshold to avoid extremely large beta_max
+                min_delta_energy = np.min(abs_dE, axis=0).mean()
+                max_delta_energy = np.mean(abs_dE, axis=0).mean()
+
+
+    # Same logic in SA
+    prob_inv = max(n / 1, 100)
+    beta_max = np.log(prob_inv) / min_delta_energy
+
+    # 10 times heat flip accept for 1 sweep in the initial state.
+    prob_inv = max(n / 10, 2)
+    beta_min = np.log(prob_inv) / max_delta_energy
+    if linear_term_dE / max_delta_energy > 100:
+        # Fast cooling mode
+        beta_min = max(beta_max / 100, beta_min)
+
+    if gamma is None:
+        p = min(10.0 / n, 0.1)
+        _gamma = np.arctanh(p) / (2*beta_min)
+        return (beta_min, beta_max, _gamma)
+
+    beta_min *= trotter
+    beta_max *= trotter*10
+
+    return (beta_min, beta_max, gamma)
+

@@ -109,18 +109,6 @@ public:
    void SetTemperatureSchedule(const utility::TemperatureSchedule schedule) {
       schedule_ = schedule;
    }
-   
-   //! @brief Set whether to use local search after simulated annealing.
-   //! @param use_local_search Whether to use local search.
-   void SetUseLocalSearch(const bool use_local_search) {
-      use_local_search_ = use_local_search;
-   }
-   
-   //! @brief Get whether local search is used.
-   //! @return Whether local search is used.
-   bool GetUseLocalSearch() const {
-      return use_local_search_;
-   }
          
    //! @brief Get the model.
    //! @return The model.
@@ -275,49 +263,6 @@ private:
    //! @brief The samples.
    std::vector<std::vector<VariableType>> samples_;
    
-   //! @brief Whether to use local search after simulated annealing.
-   bool use_local_search_ = false;
-   
-   //! @brief Check if the model is a QUBO model.
-   //! @return True if the model is QUBO (binary variables), false otherwise.
-   bool IsQuboModel() const {
-      // Check if variables are binary (0 or 1)
-      return std::is_same_v<VariableType, int> || std::is_same_v<VariableType, std::int32_t>;
-   }
-   
-   //! @brief Apply greedy local search (single spin flip) to a sample.
-   //! @param sample The sample to improve.
-   //! @param system The system used for energy calculation.
-   template<class SystemType>
-   void ApplyLocalSearch(std::vector<VariableType>& sample, SystemType& system) {
-      if (!IsQuboModel()) return;
-      
-      bool improved = true;
-      while (improved) {
-         improved = false;
-         ValueType current_energy = model_.CalculateEnergy(sample);
-         
-         // Try flipping each variable
-         for (std::size_t i = 0; i < sample.size(); ++i) {
-            // Flip variable
-            VariableType original_value = sample[i];
-            sample[i] = 1 - sample[i];  // For binary: 0->1, 1->0
-            
-            // Calculate new energy
-            ValueType new_energy = model_.CalculateEnergy(sample);
-            
-            // Accept if energy is better or equal (greedy)
-            if (new_energy <= current_energy) {
-               current_energy = new_energy;
-               improved = true;
-            } else {
-               // Revert the flip
-               sample[i] = original_value;
-            }
-         }
-      }
-   }
-   
    template<typename RandType>
    std::vector<std::pair<typename RandType::result_type, typename RandType::result_type>>
    GenerateSeedPairList(const typename RandType::result_type seed, const std::int32_t num_reads) const {
@@ -337,26 +282,11 @@ private:
       const auto seed_pair_list = GenerateSeedPairList<RandType>(static_cast<typename RandType::result_type>(seed_), num_reads_);
       std::vector<ValueType> beta_list = utility::GenerateBetaList(schedule_, beta_min_, beta_max_, num_sweeps_);
       
-      // Process samples in batches of num_threads_ size
-      const std::int32_t batch_size = num_threads_;
-      const std::int32_t num_batches = (num_reads_ + batch_size - 1) / batch_size;
-      
-      for (std::int32_t batch = 0; batch < num_batches; ++batch) {
-         const std::int32_t start_idx = batch * batch_size;
-         const std::int32_t end_idx = std::min(start_idx + batch_size, num_reads_);
-         const std::int32_t current_batch_size = end_idx - start_idx;
-         
-#pragma omp parallel for schedule(guided) num_threads(current_batch_size)
-         for (std::int32_t i = start_idx; i < end_idx; ++i) {
-            auto system = SystemType{model_, seed_pair_list[i].first};
-            updater::SingleFlipUpdater<SystemType, RandType>(&system, num_sweeps_, beta_list, seed_pair_list[i].second, update_method_);
-            samples_[i] = system.ExtractSample();
-            
-            // Apply local search if enabled and model is QUBO
-            if (use_local_search_ && IsQuboModel()) {
-               ApplyLocalSearch(samples_[i], system);
-            }
-         }
+#pragma omp parallel for schedule(guided) num_threads(num_threads_)
+      for (std::int32_t i = 0; i < num_reads_; ++i) {
+         auto system = SystemType{model_, seed_pair_list[i].first};
+         updater::SingleFlipUpdater<SystemType, RandType>(&system, num_sweeps_, beta_list, seed_pair_list[i].second, update_method_);
+         samples_[i] = system.ExtractSample();
       }
    }
    

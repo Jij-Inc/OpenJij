@@ -175,7 +175,6 @@ jobs:
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_BUILD: ${{matrix.CIBW_BUILD}}
-          CIBW_SKIP: "cp313-*"
           CIBW_ENVIRONMENT: ""
           CIBW_PLATFORM:  linux
           CIBW_ARCHS: ${{matrix.arch}}
@@ -227,7 +226,6 @@ jobs:
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
-          CIBW_SKIP: "cp313-*"
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
       - uses: actions/upload-artifact@v4
         with:
@@ -286,7 +284,6 @@ jobs:
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
-          CIBW_SKIP: "cp313-*"
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8"
           
       - uses: actions/upload-artifact@v4
