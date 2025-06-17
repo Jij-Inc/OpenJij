@@ -205,6 +205,7 @@ $ ./tests/cxxjij_test
 $ ctest --extra-verbose --parallel --schedule-random
 ```
 
+
 Needs: CMake > 3.22, C++17
 
 - Format
