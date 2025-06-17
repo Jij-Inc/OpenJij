@@ -89,6 +89,59 @@ $ cd openjij
 $ python -m pip install -vvv .
 ```
 
+### Development Install (Recommended for Contributors)
+
+For faster development iteration, use the editable install approach:
+
+```sh
+$ git clone git@github.com:OpenJij/OpenJij.git
+$ cd OpenJij
+$ python -m venv .venv
+$ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
+$ pip install -r requirements.txt
+
+# Build C++ extension only (faster than full install)
+$ python setup.py build_ext --inplace
+
+# Install Python code in editable mode
+$ pip install -e . --no-build-isolation
+```
+
+This setup allows you to:
+- Edit Python code and see changes immediately (no reinstall needed)
+- Only rebuild C++ when you modify C++ source files
+- Maintain fast development iterations
+
+When you modify C++ code, rebuild with:
+```sh
+$ python setup.py build_ext --inplace
+```
+
+### Troubleshooting Development Setup
+
+If you encounter issues:
+
+1. **Import errors after editable install**: Make sure C++ extension is built:
+   ```sh
+   $ python setup.py build_ext --inplace
+   ```
+
+2. **CMake errors**: Ensure you have CMake > 3.22:
+   ```sh
+   $ pip install -U cmake
+   ```
+
+3. **Clean rebuild**: Remove build artifacts and rebuild:
+   ```sh
+   $ rm -rf _skbuild/ openjij/*.so openjij/include/ openjij/share/
+   $ python setup.py build_ext --inplace
+   ```
+
+4. **Check installation**: Verify the setup is working:
+   ```sh
+   $ python -c "import openjij; print('Success:', dir(openjij))"
+   ```
+
 ## For Contributor
 
 Use `pre-commit` for auto chech before git commit.
@@ -119,6 +172,27 @@ $ python setup.py --build-type Debug test
 $ python -m coverage html
 ```
 
+### Development with Editable Install
+
+For development, you can build only the C++ extension once and install Python code in editable mode:
+
+```sh
+# Build C++ extension only (in-place)
+$ python setup.py build_ext --inplace
+
+# Install Python code in editable mode (without rebuilding C++)
+$ pip install -e . --no-build-isolation
+
+# Now you can edit Python code and changes will be reflected immediately
+# To rebuild C++ extension after making C++ changes:
+$ python setup.py build_ext --inplace
+```
+
+This approach allows you to:
+- Modify Python code without reinstalling
+- Only rebuild C++ when necessary
+- Faster development iteration
+
 ### C++
 
 ```sh
@@ -130,6 +204,7 @@ $ ./tests/cxxjij_test
 # Alternatively  Use CTest 
 $ ctest --extra-verbose --parallel --schedule-random
 ```
+
 
 Needs: CMake > 3.22, C++17
 
