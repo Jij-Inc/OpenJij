@@ -556,7 +556,6 @@ class SASampler(BaseSampler):
                 temperature_schedule=temperature_schedule
             )
 
-
 def geometric_ising_beta_schedule(
     cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
     beta_max=None,
@@ -573,42 +572,52 @@ def geometric_ising_beta_schedule(
     Returns:
         list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
     """
-
- 
+    linear_term_dE: float = 1.0
+    min_delta_energy = 1.0
+    max_delta_energy = 1.0
+    # generate Ising matrix (with symmetric form)
+    ising_interaction = cxxgraph.get_interactions()
     if beta_min is None or beta_max is None:
-        # generate Ising matrix (with symmetric form)
-        ising_interaction = cxxgraph.get_interactions()
-        abs_ising_interaction = np.abs(ising_interaction)[:-1]
         # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
-        if abs_ising_interaction.shape[0] == 0:
+        if ising_interaction.shape[0] <= 1:
             min_delta_energy = 1
             max_delta_energy = 1
+            linear_term_dE = 1
         else:
-            max_abs_ising_interaction = np.max(abs_ising_interaction)
+            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
+            random_spin[-1, :] = 1  # last element is bias term
+            # calculate delta energy
+            abs_dE = np.abs((2 * ising_interaction @ random_spin * (-2*random_spin)))
 
-            # automatical setting of min, max delta energy
-            abs_bias = np.sum(abs_ising_interaction, axis=1)
+            # Check linear term energy difference
+            linear_term_dE = abs_dE[-1, :].mean()  # last row corresponds to linear term
+
+            abs_dE = abs_dE[:-1, :]  # remove the last element (bias term)
 
             # apply threshold to avoid extremely large beta_max
             THRESHOLD = 1e-8
+            abs_dE = abs_dE[abs_dE >= THRESHOLD]
+            if len(abs_dE) == 0:
+                min_delta_energy = 1
+                max_delta_energy = 1
+            else:
+                # apply threshold to avoid extremely large beta_max
+                min_delta_energy = np.min(abs_dE, axis=0).mean()
+                max_delta_energy = np.mean(abs_dE, axis=0).mean()
 
+    n = ising_interaction.shape[0]  # n+1
 
-            min_delta_energy = np.min(
-                abs_ising_interaction[
-                    abs_ising_interaction > max_abs_ising_interaction * THRESHOLD
-                ]
-            )
-            max_delta_energy = np.max(
-                abs_bias[abs_bias > max_abs_ising_interaction * THRESHOLD]
-            )
-
-    # TODO: More optimal schedule ?
-
-    if beta_min is None:
-        beta_min = np.log(2) / max_delta_energy
     if beta_max is None:
-        beta_max = np.log(100) / min_delta_energy
-
+        # 1 times heat flip accept for 1 sweep in the final state.
+        prob_inv = max(n / 1, 100)
+        beta_max = np.log(prob_inv) / min_delta_energy
+    if beta_min is None:
+        # 10 times heat flip accept for 1 sweep in the initial state.
+        prob_inv = max(n / 10, 2)
+        beta_min = np.log(prob_inv) / max_delta_energy
+        if linear_term_dE / max_delta_energy > 100:
+            # Fast cooling mode
+            beta_min = max(beta_max / 100, beta_min)
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
 
     # set schedule to cxxjij
