@@ -623,9 +623,10 @@ def geometric_ising_beta_schedule(
     linear_term_dE: float = 1.0
     min_delta_energy = 1.0
     max_delta_energy = 1.0
+
+    ising_interaction = cxxgraph.get_interactions()
     if beta_min is None or beta_max is None:
         # generate Ising matrix (with symmetric form)
-        ising_interaction = cxxgraph.get_interactions()
         # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
         if ising_interaction.shape[0] <= 1:
             min_delta_energy = 1
