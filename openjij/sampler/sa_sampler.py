@@ -572,7 +572,6 @@ def geometric_ising_beta_schedule(
     Returns:
         list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
     """
-    linear_term_dE: float = 1.0
     min_delta_energy = 1.0
     max_delta_energy = 1.0
     # generate Ising matrix (with symmetric form)
@@ -582,42 +581,59 @@ def geometric_ising_beta_schedule(
         if ising_interaction.shape[0] <= 1:
             min_delta_energy = 1
             max_delta_energy = 1
-            linear_term_dE = 1
         else:
             random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
             random_spin[-1, :] = 1  # last element is bias term
             # calculate delta energy
-            abs_dE = np.abs((2 * ising_interaction @ random_spin * (-2*random_spin)))
+            dE = (2 * ising_interaction @ random_spin * (-2 * random_spin))
+            dE = dE[:-1, :]  # remove the last element (bias term)
 
-            # Check linear term energy difference
-            linear_term_dE = abs_dE[-1, :].mean()  # last row corresponds to linear term
-
-            abs_dE = abs_dE[:-1, :]  # remove the last element (bias term)
-
-            # apply threshold to avoid extremely large beta_max
             THRESHOLD = 1e-8
-            abs_dE = abs_dE[abs_dE >= THRESHOLD]
-            if len(abs_dE) == 0:
+            dE_positive = dE[dE > THRESHOLD]
+
+            if len(dE_positive) == 0:
                 min_delta_energy = 1
-                max_delta_energy = 1
+                max_delta_energy = 1.1
             else:
-                # apply threshold to avoid extremely large beta_max
-                min_delta_energy = np.min(abs_dE, axis=0).mean()
-                max_delta_energy = np.mean(abs_dE, axis=0).mean()
+                dE_mean = np.mean(dE_positive, axis=0).mean()
+                dE_std = np.std(dE_positive, axis=0).mean()
+                cv = dE_std / dE_mean
+                if cv >= 1.0:
+                    # if the coefficient of variation is large, use the mean of positive dE
+                    max_delta_energy = dE_mean + dE_std
+                else:
+                    # if the coefficient of variation is small, use the mean of positive dE
+                    # to avoid extremely large beta_max
+                    max_delta_energy = dE_mean
+
+                abs_int = np.abs(ising_interaction[:-1, :-1])
+                abs_int = abs_int[abs_int >= THRESHOLD]
+                dE_min = np.min(dE_positive, axis=0).mean()
+                comp_min = np.min(abs_int) * 2
+                if dE_min < comp_min:
+                    min_delta_energy = dE_min
+                else:
+                    min_delta_energy = np.sqrt(comp_min * dE_min)
 
     n = ising_interaction.shape[0]  # n+1
 
-    if beta_max is None:
-        # 1 times heat flip accept for 1 sweep in the final state.
-        prob_inv = max(n / 1, 100)
-        beta_max = np.log(prob_inv) / min_delta_energy
+    prob_init_base = 0.6
+    dP_init = 0.99 - prob_init_base
+    sigma = np.log(n + 1)
+    prob_init = prob_init_base + dP_init / 2 * np.tanh(np.log(num_sweeps/(n+1))/sigma + 0.1)
+
+    prob_final_base = 1 / 100
+    dP_final = min(0.001, 1/n) - prob_final_base
+    sigma = np.log(n + 1)
+    prob_final = prob_final_base + dP_final / 2 * np.tanh(np.log(num_sweeps/(n+1))/sigma + 0.1)
+
+
     if beta_min is None:
-        # 10 times heat flip accept for 1 sweep in the initial state.
-        prob_inv = max(n / 10, 2)
-        beta_min = np.log(prob_inv) / max_delta_energy
-        if linear_term_dE / max_delta_energy > 50:
-            # Fast cooling mode
-            beta_min = max(beta_max / 20, beta_min)
+        beta_min = -np.log(prob_init) / max_delta_energy
+
+    if beta_max is None:
+        beta_max = -np.log(prob_final) / min_delta_energy 
+
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
 
     # set schedule to cxxjij
