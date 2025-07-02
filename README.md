@@ -16,6 +16,8 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/3b2f43f3e601ae74c497/maintainability)](https://codeclimate.com/github/OpenJij/OpenJij/maintainability)
 [![codecov](https://codecov.io/gh/OpenJij/OpenJij/branch/main/graph/badge.svg?token=WMSK3GS8E5)](https://codecov.io/gh/OpenJij/OpenJij)
 
+[![DOI](https://zenodo.org/badge/164117633.svg)](https://zenodo.org/badge/latestdoi/164117633)
+
 ## Coverage Graph
 
 | **Sunburst**                                                                                                                                                         | **Grid**                                                                                                                                                         | **Icicle**                                                                                                                                                         |
