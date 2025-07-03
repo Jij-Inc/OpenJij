@@ -17,5 +17,6 @@
 
 #include "binary_polynomial_model.hpp"
 #include "ising_polynomial_model.hpp"
+#include "integer_quadratic_model.hpp"
 #include "quadratic.hpp"
 #include "polynomial.hpp"

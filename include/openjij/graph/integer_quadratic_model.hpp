@@ -47,7 +47,11 @@ public:
          index_set.insert(key.begin(), key.end());
       }
       
+      bounds_ = bounds;
+      
       index_list_ = std::vector<IndexType>(index_set.begin(), index_set.end());
+      std::sort(index_list_.begin(), index_list_.end());
+      
       num_variables_ = index_list_.size();
       
       quadratic_.resize(num_variables_);
@@ -80,6 +84,14 @@ public:
          }
       }
    }
+
+   const std::vector<IndexType>& get_index_list() const { return index_list_; }
+   std::int64_t get_num_variables() const { return num_variables_; }
+   const std::vector<std::vector<std::pair<IndexType, ValueType>>>& get_quadratic() const { return quadratic_; }
+   const std::vector<ValueType>& get_linear() const { return linear_; }
+   const std::vector<ValueType>& get_squared() const { return squared_; }
+   ValueType get_constant() const { return constant_; }
+   const std::vector<std::pair<std::int64_t, std::int64_t>>& get_bounds() const { return bounds_; }
    
    
    
