@@ -67,7 +67,12 @@ enum class UpdateMethod {
    
    //! @brief Heat bath update
    HEAT_BATH,
-      
+
+   //! @brief Suwa-Todo update
+   SUWA_TODO,
+
+   //! @brief Metropolis update with optimal transition
+   OPT_METROPOLIS,
 };
 
 enum class RandomNumberEngine {

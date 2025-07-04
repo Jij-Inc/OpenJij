@@ -21,6 +21,7 @@
 #include "openjij/updater/k_local.hpp"
 #include "openjij/updater/single_spin_flip.hpp"
 #include "openjij/updater/swendsen_wang.hpp"
+#include "openjij/updater/single_integer_move.hpp"
 
 #ifdef USE_CUDA
 #include "openjij/updater/gpu.hpp"

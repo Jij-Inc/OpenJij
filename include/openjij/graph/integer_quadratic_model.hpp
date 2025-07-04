@@ -22,24 +22,15 @@ namespace graph {
 class IntegerQuadraticModel {
    
 public:
-   //! @brief The value type.
-   using ValueType = double;
    
-   //! @brief The index type.
-   using IndexType = std::int64_t;
-   
-   //! @brief The variable type.
-   using VariableType = std::int64_t;
-   
-   
-   IntegerQuadraticModel(std::vector<std::vector<IndexType>> &key_list,
-                         std::vector<ValueType> &value_list,
+   IntegerQuadraticModel(std::vector<std::vector<std::int64_t>> &key_list,
+                         std::vector<double> &value_list,
                          std::vector<std::pair<std::int64_t, std::int64_t>> &bounds) {
       if (key_list.size() != value_list.size()) {
          throw std::runtime_error("Key and value lists must have the same size.");
       }
       
-      std::unordered_set<IndexType> index_set;
+      std::unordered_set<std::int64_t> index_set;
       for (const auto &key : key_list) {
          if (key.size() > 2) {
             throw std::runtime_error("Key size must be less than or equal to 2.");
@@ -49,7 +40,7 @@ public:
       
       bounds_ = bounds;
       
-      index_list_ = std::vector<IndexType>(index_set.begin(), index_set.end());
+      index_list_ = std::vector<std::int64_t>(index_set.begin(), index_set.end());
       std::sort(index_list_.begin(), index_list_.end());
       
       num_variables_ = index_list_.size();
@@ -85,23 +76,61 @@ public:
       }
    }
 
-   const std::vector<IndexType>& get_index_list() const { return index_list_; }
-   std::int64_t get_num_variables() const { return num_variables_; }
-   const std::vector<std::vector<std::pair<IndexType, ValueType>>>& get_quadratic() const { return quadratic_; }
-   const std::vector<ValueType>& get_linear() const { return linear_; }
-   const std::vector<ValueType>& get_squared() const { return squared_; }
-   ValueType get_constant() const { return constant_; }
-   const std::vector<std::pair<std::int64_t, std::int64_t>>& get_bounds() const { return bounds_; }
+   std::pair<double, double> GetMaxMinCoeffs() const {
+      const double MIN_THRESHOLD = 1e-12;
+
+      auto nonzero_abs_min = [&](double current_min, double value) -> double {
+         if (std::abs(value) > MIN_THRESHOLD) {
+            return std::min(std::abs(current_min), std::abs(value));
+         }
+         return current_min;
+      };
+
+      auto nonzero_abs_max = [&](double current_max, double value) -> double {
+         if (std::abs(value) > MIN_THRESHOLD) {
+            return std::max(std::abs(current_max), std::abs(value));
+         }
+         return current_max;
+      };
+
+      double abs_min_dE = std::numeric_limits<double>::infinity();
+      double abs_max_dE = 0.0;
+
+      for (std::int64_t i = 0; i < this->num_variables_; ++i) {
+         for (const auto &[j, q] : this->quadratic_[i]) {
+            abs_min_dE = nonzero_abs_min(abs_min_dE, q);
+            abs_max_dE = nonzero_abs_max(abs_max_dE, q);
+         }
+         abs_min_dE = nonzero_abs_min(abs_min_dE, this->linear_[i]);
+         abs_max_dE = nonzero_abs_max(abs_max_dE, this->linear_[i]);
+         abs_min_dE = nonzero_abs_min(abs_min_dE, this->squared_[i]);
+         abs_max_dE = nonzero_abs_max(abs_max_dE, this->squared_[i]);
+      }
+
+      if (std::isinf(abs_min_dE) || abs_max_dE == 0.0) {
+         throw std::runtime_error("No valid energy difference found.");
+      }
+
+      return std::make_pair(abs_max_dE, abs_min_dE);
+   }
+
+   const std::vector<std::int64_t>& GetIndexList() const { return index_list_; }
+   std::int64_t GetNumVariables() const { return num_variables_; }
+   const std::vector<std::vector<std::pair<std::int64_t, double>>>& GetQuadratic() const { return quadratic_; }
+   const std::vector<double>& GetLinear() const { return linear_; }
+   const std::vector<double>& GetSquared() const { return squared_; }
+   double GetConstant() const { return constant_; }
+   const std::vector<std::pair<std::int64_t, std::int64_t>>& GetBounds() const { return bounds_; }
    
    
    
 private:
-   std::vector<IndexType> index_list_;
+   std::vector<std::int64_t> index_list_;
    std::int64_t num_variables_;
-   std::vector<std::vector<std::pair<IndexType, ValueType>>> quadratic_;
-   std::vector<ValueType> linear_;
-   std::vector<ValueType> squared_;
-   ValueType constant_;
+   std::vector<std::vector<std::pair<std::int64_t, double>>> quadratic_;
+   std::vector<double> linear_;
+   std::vector<double> squared_;
+   double constant_;
    std::vector<std::pair<std::int64_t, std::int64_t>> bounds_;
 };
 
