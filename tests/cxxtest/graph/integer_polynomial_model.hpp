@@ -143,9 +143,9 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
    
    const auto &only_multilinear_set = model.GetOnlyMultilinearIndexSet();
    EXPECT_EQ(only_multilinear_set.size(), 2);
-   EXPECT_EQ(only_multilinear_set.count(2), 1);
    EXPECT_EQ(only_multilinear_set.count(0), 0);
    EXPECT_EQ(only_multilinear_set.count(1), 0);
+   EXPECT_EQ(only_multilinear_set.count(2), 1);
    EXPECT_EQ(only_multilinear_set.count(3), 1);
    EXPECT_EQ(only_multilinear_set.count(4), 0);
    
