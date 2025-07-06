@@ -565,10 +565,11 @@ class SASampler(BaseSampler):
                 temperature_schedule=temperature_schedule
             )
     
-    def sample_quio(
+    def _base_integer_sampler(
         self,
         J: dict[tuple, float],
         bound_list: dict[Any, tuple[int, int]],
+        include_higher_order: bool,
         num_sweeps: int = 1000,
         num_reads: int = 1,
         num_threads: int = 1,
@@ -587,7 +588,7 @@ class SASampler(BaseSampler):
         summarize_interactions = defaultdict(float)
         index_set = set()
         for key, value in J.items():
-            if len(key) > 2:
+            if not include_higher_order and len(key) > 2:
                 raise ValueError(
                     "Only pairwise interactions are supported. Please use `sample_huio` for higher-order interactions with integer variables."
                 )
@@ -618,14 +619,21 @@ class SASampler(BaseSampler):
                 (bound_list[index][0], bound_list[index][1])
             )
 
-        cxx_iqm = cxxjij.graph.IntegerQuadraticModel(
-            key_list=int_key_list,
-            value_list=int_value_list,
-            bound_list=int_bound_list,
-        )
+        if include_higher_order:
+            cxx_model = cxxjij.graph.IntegerPolynomialModel(
+                key_list=int_key_list,
+                value_list=int_value_list,
+                bound_list=int_bound_list,
+            )
+        else:
+            cxx_model = cxxjij.graph.IntegerQuadraticModel(
+                key_list=int_key_list,
+                value_list=int_value_list,
+                bound_list=int_bound_list,
+            )
 
         if beta_min is None or beta_max is None:
-            max_coeff, min_coeff = cxx_iqm.get_max_min_coeffs()
+            max_coeff, min_coeff = cxx_model.get_max_min_coeffs()
             if beta_min is None:
                 max_T = max_coeff / math.log(4)
             if beta_max is None:
@@ -642,8 +650,9 @@ class SASampler(BaseSampler):
 
         # Start sampling
         start_sample = time.perf_counter()
-        cxx_result_list = cxxjij.sampler.sample_by_integer_sa_quadratic(
-            model=cxx_iqm,
+        cxx_sampler = cxxjij.sampler.sample_by_integer_sa_polynomial if include_higher_order else cxxjij.sampler.sample_by_integer_sa_quadratic
+        cxx_result_list = cxx_sampler(
+            model=cxx_model,
             num_sweeps=num_sweeps,
             update_method=cast_to_cxx_update_method(updater),
             rand_type=cast_to_cxx_random_number_engine(random_number_engine),
@@ -691,8 +700,70 @@ class SASampler(BaseSampler):
         }
 
         return oj_response
-
     
+    def sample_quio(
+        self,
+        J: dict[tuple, float],
+        bound_list: dict[Any, tuple[int, int]],
+        num_sweeps: int = 1000,
+        num_reads: int = 1,
+        num_threads: int = 1,
+        beta_min: Optional[float] = None,
+        beta_max: Optional[float] = None,
+        updater: str = "OPT_METROPOLIS",
+        random_number_engine: str = "XORSHIFT",
+        seed: Optional[int] = None,
+        temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
+    ) -> "oj.sampler.response.Response":
+        return self._base_integer_sampler(
+            J=J,
+            bound_list=bound_list,
+            include_higher_order=False,
+            num_sweeps=num_sweeps,
+            num_reads=num_reads,
+            num_threads=num_threads,
+            beta_min=beta_min,
+            beta_max=beta_max,
+            updater=updater,
+            random_number_engine=random_number_engine,
+            seed=seed,
+            temperature_schedule=temperature_schedule,
+            log_history=log_history
+        )
+        
+    
+    def sample_huio(
+        self,
+        J: dict[tuple, float],
+        bound_list: dict[Any, tuple[int, int]],
+        num_sweeps: int = 1000,
+        num_reads: int = 1,
+        num_threads: int = 1,
+        beta_min: Optional[float] = None,
+        beta_max: Optional[float] = None,
+        updater: str = "OPT_METROPOLIS",
+        random_number_engine: str = "XORSHIFT",
+        seed: Optional[int] = None,
+        temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
+    ) -> "oj.sampler.response.Response":
+        return self._base_integer_sampler(
+            J=J,
+            bound_list=bound_list,
+            include_higher_order=True,
+            num_sweeps=num_sweeps,
+            num_reads=num_reads,
+            num_threads=num_threads,
+            beta_min=beta_min,
+            beta_max=beta_max,
+            updater=updater,
+            random_number_engine=random_number_engine,
+            seed=seed,
+            temperature_schedule=temperature_schedule,
+            log_history=log_history
+        )
+            
 def geometric_ising_beta_schedule(
     cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
     beta_max=None,
