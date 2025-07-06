@@ -12,14 +12,17 @@
 # limitations under the License
 from __future__ import annotations
 try:
-    from typing import Optional, Union
+    from typing import Optional, Union, Any
 except ImportError:
-    from typing_extensions import Optional, Union
+    from typing_extensions import Optional, Union, Any
 
 import cimod
 import dimod
+import math
+import time
 import numpy as np
 
+from collections import defaultdict
 from dimod import BINARY, SPIN
 
 import openjij
@@ -28,7 +31,13 @@ import openjij.cxxjij as cxxjij
 
 from openjij.sampler.sampler import BaseSampler
 from openjij.utils.graph_utils import qubo_to_ising
-from openjij.sampler.base_sa_sample_hubo import base_sample_hubo
+from openjij.sampler.base_sa_sample_hubo import base_sample_hubo, to_oj_response
+from openjij.utils.cxx_cast import (
+    cast_to_cxx_update_method,
+    cast_to_cxx_random_number_engine,
+    cast_to_cxx_temperature_schedule
+)
+
 
 """This module contains Simulated Annealing sampler."""
 
@@ -555,7 +564,135 @@ class SASampler(BaseSampler):
                 seed=seed,
                 temperature_schedule=temperature_schedule
             )
+    
+    def sample_quio(
+        self,
+        J: dict[tuple, float],
+        bound_list: dict[Any, tuple[int, int]],
+        num_sweeps: int = 1000,
+        num_reads: int = 1,
+        num_threads: int = 1,
+        beta_min: Optional[float] = None,
+        beta_max: Optional[float] = None,
+        updater: str = "OPT_METROPOLIS",
+        random_number_engine: str = "XORSHIFT",
+        seed: Optional[int] = None,
+        temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
+    ) -> "oj.sampler.response.Response":
 
+        start_solving = time.perf_counter()
+
+        # Summarize interactions
+        summarize_interactions = defaultdict(float)
+        index_set = set()
+        for key, value in J.items():
+            if len(key) > 2:
+                raise ValueError(
+                    "Only pairwise interactions are supported. Please use `sample_huio` for higher-order interactions with integer variables."
+                )
+            key_list = tuple(sorted(list(key), key=lambda x: (isinstance(x, str), x)))
+            summarize_interactions[key_list] += value
+            index_set.update(key)
+        
+        self.index_list = sorted(index_set, key=lambda x: (isinstance(x, str), x))
+        self.num_variables = len(self.index_list)
+
+        # Create a mapping from the original indices to integer indices
+        self.index_map = {index: i for i, index in enumerate(self.index_list)}
+
+        # Convert keys to integer indices
+        int_key_list = []
+        int_value_list = []
+        int_bound_list = []
+        for key, value in summarize_interactions.items():
+            int_key = [self.index_map[i] for i in key]
+            int_key_list.append(int_key)
+            int_value_list.append(value)
+
+        for i in range(self.num_variables):
+            index = self.index_list[i]
+            if index not in bound_list:
+                raise ValueError(f"Index {index} not found in bound_list.")
+            int_bound_list.append(
+                (bound_list[index][0], bound_list[index][1])
+            )
+
+        cxx_iqm = cxxjij.graph.IntegerQuadraticModel(
+            key_list=int_key_list,
+            value_list=int_value_list,
+            bound_list=int_bound_list,
+        )
+
+        if beta_min is None or beta_max is None:
+            max_coeff, min_coeff = cxx_iqm.get_max_min_coeffs()
+            if beta_min is None:
+                max_T = max_coeff / math.log(4)
+            if beta_max is None:
+                min_T = min_coeff / math.log(100)
+        if beta_min is not None:
+            min_T = beta_min
+        if beta_max is not None:
+            max_T = beta_max
+
+        if seed is None:
+            seed = np.random.randint(0, 2**32 - 1)
+
+        preprocess_time = time.perf_counter() - start_solving
+
+        # Start sampling
+        start_sample = time.perf_counter()
+        cxx_result_list = cxxjij.sampler.sample_by_integer_sa_quadratic(
+            model=cxx_iqm,
+            num_sweeps=num_sweeps,
+            update_method=cast_to_cxx_update_method(updater),
+            rand_type=cast_to_cxx_random_number_engine(random_number_engine),
+            schedule=cast_to_cxx_temperature_schedule(temperature_schedule),
+            num_reads=num_reads,
+            seed=seed,
+            num_threads=num_threads,
+            min_T=min_T,
+            max_T=max_T,
+            log_history=log_history,
+        )
+        sample_time = time.perf_counter() - start_sample
+
+        # Make openjij response
+        start_make_oj_response = time.perf_counter()
+        oj_response = to_oj_response(
+            variables=[r.solution for r in cxx_result_list], 
+            index_list=self.index_list,
+            energies=[r.energy for r in cxx_result_list],
+            vartype=oj.Vartype.DISCRETE
+        )
+
+        oj_response.info["schedule"] = {
+            "num_sweeps": num_sweeps,
+            "num_reads": num_reads,
+            "num_threads": num_threads,
+            "beta_min": 1.0 / max_T,
+            "beta_max": 1.0 / min_T,
+            "update_method": updater,
+            "random_number_engine": random_number_engine,
+            "temperature_schedule": temperature_schedule,
+            "seed": seed,
+        }
+
+        oj_response.info["log"] = {
+            "energy_history": np.array([r.energy_history for r in cxx_result_list]),
+            "temperature_history": np.array([r.temperature_history for r in cxx_result_list]),
+        }
+
+        oj_response.info["time"] = {
+            "preprocess": preprocess_time,
+            "sample": sample_time,
+            "make_oj_response": time.perf_counter() - start_make_oj_response,
+            "total": time.perf_counter() - start_solving,
+        }
+
+        return oj_response
+
+    
 def geometric_ising_beta_schedule(
     cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
     beta_max=None,

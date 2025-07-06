@@ -73,14 +73,14 @@ public:
     }
 
     for (std::int64_t i = 0; i < this->num_variables_; ++i) {
-      if (std::abs(this->squared_[i]) < 1e-12) {
+      if (std::abs(this->squared_[i]) < 1e-10) {
         this->only_bilinear_index_set_.insert(i);
       }
     }
   }
 
   std::pair<double, double> GetMaxMinCoeffs() const {
-    const double MIN_THRESHOLD = 1e-12;
+    const double MIN_THRESHOLD = 1e-10;
 
     auto nonzero_abs_min = [&](double current_min, double value) -> double {
       if (std::abs(value) > MIN_THRESHOLD) {

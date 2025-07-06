@@ -79,7 +79,7 @@ struct HeatBathUpdater {
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double _progress) {
     if constexpr (is_integer_quadratic_model_system_v<SystemType>) {
-      if (std::abs(sa_system.GetQuadCoeff()[index]) < 1e-12) {
+      if (std::abs(sa_system.GetQuadCoeff()[index]) < 1e-10) {
         return ForBilinear(sa_system, index, T, _progress);
       } else {
         return ForAll(sa_system, index, T, _progress);
@@ -122,7 +122,7 @@ struct HeatBathUpdater {
     const auto &state = sa_system.GetState()[index];
     const double linear_coeff = sa_system.GetLinearCoeff()[index];
 
-    if (std::abs(linear_coeff) < 1e-12) {
+    if (std::abs(linear_coeff) < 1e-10) {
       return state.GenerateRandomValue(sa_system.random_number_engine);
     }
 

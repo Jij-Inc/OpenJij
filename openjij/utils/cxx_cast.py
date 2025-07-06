@@ -10,6 +10,10 @@ def cast_to_cxx_update_method(update_method: str) -> UpdateMethod:
         return UpdateMethod.METROPOLIS
     elif update_method == "HEAT_BATH":
         return UpdateMethod.HEAT_BATH
+    elif update_method == "SUWA_TODO":
+        return UpdateMethod.SUWA_TODO
+    elif update_method == "OPT_METROPOLIS":
+        return UpdateMethod.OPT_METROPOLIS
     else:
         raise RuntimeError(f"Invalid update_method={update_method}")
 
