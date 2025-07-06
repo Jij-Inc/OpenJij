@@ -69,20 +69,21 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
    
    const auto &key_value_list = model.GetKeyValueList();
    EXPECT_EQ(key_value_list.size(), 6);
+
    EXPECT_EQ(key_value_list[0].first.size(), 1);
-   EXPECT_EQ(key_value_list[0].first[0].first, 2);
-   EXPECT_EQ(key_value_list[0].first[0].second, 1);
-   EXPECT_DOUBLE_EQ(key_value_list[0].second, 2.5);
+   EXPECT_EQ(key_value_list[0].first[0].first, 0);
+   EXPECT_EQ(key_value_list[0].first[0].second, 3);
+   EXPECT_DOUBLE_EQ(key_value_list[0].second, 1.0);
 
    EXPECT_EQ(key_value_list[1].first.size(), 1);
-   EXPECT_EQ(key_value_list[1].first[0].first, 0);
-   EXPECT_EQ(key_value_list[1].first[0].second, 3);
-   EXPECT_DOUBLE_EQ(key_value_list[1].second, 1.0);
+   EXPECT_EQ(key_value_list[1].first[0].first, 4);
+   EXPECT_EQ(key_value_list[1].first[0].second, 2);
+   EXPECT_DOUBLE_EQ(key_value_list[1].second, -1.5);
 
    EXPECT_EQ(key_value_list[2].first.size(), 1);
-   EXPECT_EQ(key_value_list[2].first[0].first, 4);
-   EXPECT_EQ(key_value_list[2].first[0].second, 2);
-   EXPECT_DOUBLE_EQ(key_value_list[2].second, -1.5);
+   EXPECT_EQ(key_value_list[2].first[0].first, 2);
+   EXPECT_EQ(key_value_list[2].first[0].second, 1);
+   EXPECT_DOUBLE_EQ(key_value_list[2].second, 2.5);
 
    EXPECT_EQ(key_value_list[3].first.size(), 2);
    EXPECT_EQ(key_value_list[3].first[0].first, 0);
@@ -111,7 +112,7 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
    EXPECT_EQ(index_to_interactions.size(), 5);
 
    EXPECT_EQ(index_to_interactions[0].size(), 2);
-   EXPECT_EQ(index_to_interactions[0][0].first, 1);
+   EXPECT_EQ(index_to_interactions[0][0].first, 0);
    EXPECT_EQ(index_to_interactions[0][0].second, 3);
    EXPECT_EQ(index_to_interactions[0][1].first, 3);
    EXPECT_EQ(index_to_interactions[0][1].second, 1);
@@ -125,7 +126,7 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
    EXPECT_EQ(index_to_interactions[1][2].second, 1);
 
    EXPECT_EQ(index_to_interactions[2].size(), 2);
-   EXPECT_EQ(index_to_interactions[2][0].first, 0);
+   EXPECT_EQ(index_to_interactions[2][0].first, 2);
    EXPECT_EQ(index_to_interactions[2][0].second, 1);
    EXPECT_EQ(index_to_interactions[2][1].first, 5);
    EXPECT_EQ(index_to_interactions[2][1].second, 1);
@@ -137,7 +138,7 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
    EXPECT_EQ(index_to_interactions[3][1].second, 1);
 
    EXPECT_EQ(index_to_interactions[4].size(), 1);
-   EXPECT_EQ(index_to_interactions[4][0].first, 2);
+   EXPECT_EQ(index_to_interactions[4][0].first, 1);
    EXPECT_EQ(index_to_interactions[4][0].second, 2);
    
    const auto &only_multilinear_set = model.GetOnlyMultilinearIndexSet();

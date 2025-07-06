@@ -58,6 +58,8 @@ public:
                int_keys.emplace_back(index, degree);
             }
             
+            std::sort(int_keys.begin(), int_keys.end());
+            
             this->key_value_list_.emplace_back(int_keys, value_list[i]);
          }
       }
