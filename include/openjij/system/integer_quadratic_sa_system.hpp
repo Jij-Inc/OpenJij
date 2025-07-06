@@ -147,50 +147,6 @@ public:
       }
    }
 
-   std::pair<std::int64_t, double> GetMaxEnergyDifference(const std::int64_t index) {
-      const double a = this->quad_coeff_[index];
-      const double b = this->linear_coeff_[index];
-      const auto &x = this->state_[index];
-      const std::int64_t dxl = x.lower_bound - x.value;
-      const std::int64_t dxu = x.upper_bound - x.value;
-      
-      if (a > 0) {
-         const double dE_lower = this->GetEnergyDifference(index, x.lower_bound);
-         const double dE_upper = this->GetEnergyDifference(index, x.upper_bound);
-         if (dE_lower >= dE_upper) {
-            return std::make_pair(x.lower_bound, dE_lower);
-         } else {
-            return std::make_pair(x.upper_bound, dE_upper);
-         }
-      } else if (a == 0) {
-         if (b > 0) {
-            return std::make_pair(x.upper_bound, this->GetEnergyDifference(index, x.upper_bound));
-         } else if (b < 0) {
-            return std::make_pair(x.lower_bound, this->GetEnergyDifference(index, x.lower_bound));
-         } else {
-            const std::int64_t random_value = x.GenerateRandomValue(this->random_number_engine);
-            return std::make_pair(random_value, 0.0);
-         }
-      } else {
-         const double center = -b / (2 * a);
-         if (dxu <= center) {
-            return std::make_pair(x.upper_bound, this->GetEnergyDifference(index, x.upper_bound));
-         } else if (dxl < center && center < dxu) {
-            const std::int64_t dx_left = static_cast<std::int64_t>(std::floor(center));
-            const std::int64_t dx_right = static_cast<std::int64_t>(std::ceil(center));
-            if (center - dx_left <= dx_right - center) {
-               return std::make_pair(x.value + dx_left, this->GetEnergyDifference(index, x.value + dx_left));
-            } else {
-               return std::make_pair(x.value + dx_right, this->GetEnergyDifference(index, x.value + dx_right));
-            }
-         } else if (dxl >= center) {
-            return std::make_pair(x.lower_bound, this->GetEnergyDifference(index, x.lower_bound));
-         } else {
-            throw std::runtime_error("Invalid state");
-         }
-      }
-   }
-
    const std::vector<utility::IntegerVariable> &GetState() const {
       return this->state_;
    }
@@ -206,7 +162,19 @@ public:
    double GetEnergy() const {
       return this->energy_;
    }
+   
+   bool OnlyMultiLinearCoeff(std::int64_t index) const {
+      return this->model.GetOnlyBilinearIndexSet().count(index) > 0;
+   }
 
+   bool UnderQuadraticCoeff(std::int64_t index) const {
+      return true;
+   }
+
+   double GetLinearCoeff(std::int64_t index) const {
+      return this->linear_coeff_[index];
+   }
+   
 public:
    const graph::IntegerQuadraticModel model;
    const std::int64_t seed;

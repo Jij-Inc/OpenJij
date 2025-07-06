@@ -62,7 +62,7 @@ IntegerSAResult BaseSA(const ModelType &model,
    
    for (std::int64_t sweep = 0; sweep < num_sweeps; ++sweep) {
       const double T = get_T(sweep);
-      const double progress = static_cast<double>(sweep) / num_sweeps;
+      const double progress = static_cast<double>(sweep) / (num_sweeps - 1);
       for (std::int64_t i = 0; i < num_variables; ++i) {
          const auto new_x = state_updater.GenerateNewValue(sa_system, i, T, progress);
          sa_system.SetValue(i, new_x);
