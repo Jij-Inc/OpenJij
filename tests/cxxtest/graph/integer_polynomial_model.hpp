@@ -133,6 +133,10 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
   EXPECT_EQ(under_quadratic_set.count(3), 1);
   EXPECT_EQ(under_quadratic_set.count(4), 1);
   EXPECT_EQ(under_quadratic_set.count(0), 0);
+
+  const auto [max_coeff, min_coeff] = model.GetMaxMinCoeffs();
+  EXPECT_DOUBLE_EQ(max_coeff, 3.0);
+  EXPECT_DOUBLE_EQ(min_coeff, 0.5);
 }
 
 } // namespace test

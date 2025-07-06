@@ -109,6 +109,39 @@ public:
     }
   }
 
+  std::pair<double, double> GetMaxMinCoeffs() const {
+    const double MIN_THRESHOLD = 1e-12;
+
+    auto nonzero_abs_min = [&](double current_min, double value) -> double {
+      if (std::abs(value) > MIN_THRESHOLD) {
+        return std::min(std::abs(current_min), std::abs(value));
+      }
+      return current_min;
+    };
+
+    auto nonzero_abs_max = [&](double current_max, double value) -> double {
+      if (std::abs(value) > MIN_THRESHOLD) {
+        return std::max(std::abs(current_max), std::abs(value));
+      }
+      return current_max;
+    };
+
+    double abs_min_dE = std::numeric_limits<double>::infinity();
+    double abs_max_dE = 0.0;
+
+    for (std::int64_t i = 0; i < this->key_value_list_.size(); ++i) {
+      const double value = this->key_value_list_[i].second;
+      abs_min_dE = nonzero_abs_min(abs_min_dE, value);
+      abs_max_dE = nonzero_abs_max(abs_max_dE, value);
+    }
+
+    if (std::isinf(abs_min_dE) || abs_max_dE == 0.0) {
+      throw std::runtime_error("No valid energy difference found.");
+    }
+
+    return std::make_pair(abs_max_dE, abs_min_dE);
+  }
+
   const std::vector<std::int64_t> &GetIndexList() const {
     return this->index_list_;
   }

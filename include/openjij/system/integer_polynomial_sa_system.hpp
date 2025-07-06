@@ -28,7 +28,7 @@ class IntegerSASystem<graph::IntegerPolynomialModel, RandType> {
 
 public:
   IntegerSASystem(const graph::IntegerPolynomialModel &model,
-                  const RandType::result_type seed)
+                  const typename RandType::result_type seed)
       : model(model), seed(seed), random_number_engine(seed) {
 
     const std::int64_t num_variables = model.GetNumVariables();
@@ -291,7 +291,7 @@ public:
 
 public:
   const graph::IntegerPolynomialModel &model;
-  const RandType::result_type seed;
+  const typename RandType::result_type seed;
   RandType random_number_engine;
 
 private:
@@ -299,7 +299,7 @@ private:
   double energy_;
   std::vector<int> zero_count_;
   std::vector<double> term_prod_;
-  std::vector<std::unordered_map<int, double>> base_energy_difference_;
+  std::vector<std::unordered_map<std::int64_t, double>> base_energy_difference_;
 };
 
 } // namespace system

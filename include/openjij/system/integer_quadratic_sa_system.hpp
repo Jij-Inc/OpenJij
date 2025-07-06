@@ -28,7 +28,7 @@ class IntegerSASystem<graph::IntegerQuadraticModel, RandType> {
 
 public:
   IntegerSASystem(const graph::IntegerQuadraticModel &model,
-                  const RandType::result_type seed)
+                  const typename RandType::result_type seed)
       : model(model), seed(seed), random_number_engine(seed) {
 
     const std::int64_t num_variables = model.GetNumVariables();

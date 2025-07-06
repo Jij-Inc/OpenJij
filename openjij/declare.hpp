@@ -29,6 +29,7 @@
 #include <openjij/system/all.hpp>
 #include <openjij/updater/all.hpp>
 #include <openjij/sampler/sa_sampler.hpp>
+#include <openjij/sampler/integer_sa_sampler.hpp>
 
 namespace py = pybind11;
 
@@ -931,6 +932,74 @@ void declare_IsingPolynomialModel(py::module &m) {
    py_class.def("calculate_energy", &IPM::CalculateEnergy);
 }
 
+void declare_IntegerQuadraticModel(py::module &m) {
+   using IQM = graph::IntegerQuadraticModel;
+
+   std::string name = std::string("IntegerQuadraticModel");
+   auto py_class = py::class_<IQM>(m, name.c_str(), py::module_local());
+
+   py_class.def(py::init<std::vector<std::vector<std::int64_t>>&,
+                         std::vector<double>&,
+                         std::vector<std::pair<std::int64_t, std::int64_t>>&>(),
+                         "key_list"_a, "value_list"_a, "bound_list"_a);
+  
+   py_class.def("get_max_min_coeffs", &IQM::GetMaxMinCoeffs);
+   py_class.def("get_index_list", &IQM::GetIndexList);
+   py_class.def("get_num_variables", &IQM::GetNumVariables);
+   py_class.def("get_quadratic", &IQM::GetQuadratic);
+   py_class.def("get_linear", &IQM::GetLinear);
+   py_class.def("get_squared", &IQM::GetSquared);
+   py_class.def("get_constant", &IQM::GetConstant);
+   py_class.def("get_bound_list", &IQM::GetBounds);
+   py_class.def("get_only_bilinear_index_set", &IQM::GetOnlyBilinearIndexSet);
+}
+
+void declare_IntegerPolynomialModel(py::module &m) {
+   using IPM = graph::IntegerPolynomialModel;
+
+   std::string name = std::string("IntegerPolynomialModel");
+   auto py_class = py::class_<IPM>(m, name.c_str(), py::module_local());
+
+   py_class.def(py::init<std::vector<std::vector<std::int64_t>>&,
+                         std::vector<double>&,
+                         std::vector<std::pair<std::int64_t, std::int64_t>>&>(),
+                         "key_list"_a, "value_list"_a, "bound_list"_a);
+  
+   py_class.def("get_max_min_coeffs", &IPM::GetMaxMinCoeffs);
+   py_class.def("get_index_list", &IPM::GetIndexList);
+   py_class.def("get_num_variables", &IPM::GetNumVariables);
+   py_class.def("get_bound_list", &IPM::GetBounds);
+   py_class.def("get_constant", &IPM::GetConstant);
+   py_class.def("get_key_value_list", &IPM::GetKeyValueList);
+   py_class.def("get_index_to_interactions", &IPM::GetIndexToInteractions);
+   py_class.def("get_only_multilinear_index_set", &IPM::GetOnlyMultilinearIndexSet);
+   py_class.def("get_under_quadratic_index_set", &IPM::GetUnderQuadraticIndexSet);
+}
+
+void declare_IntegerSAResult(py::module &m) {
+    auto py_result = py::class_<sampler::IntegerSAResult>(m, "IntegerSAResult", py::module_local());
+    py_result.def_readonly("energy", &sampler::IntegerSAResult::energy);
+    py_result.def_readonly("solution", &sampler::IntegerSAResult::solution);
+    py_result.def_readonly("energy_history", &sampler::IntegerSAResult::energy_history);
+    py_result.def_readonly("temperature_history", &sampler::IntegerSAResult::temperature_history);
+}
+
+void declare_SampleByIntegerSA(py::module &m) {
+    // SampleByIntegerSA for IntegerQuadraticModel
+    m.def("sample_by_integer_sa_quadratic", 
+          &sampler::SampleByIntegerSA<graph::IntegerQuadraticModel>,
+          "model"_a, "num_sweeps"_a, "update_method"_a, "rand_type"_a,
+          "schedule"_a, "num_reads"_a, "seed"_a, "num_threads"_a, 
+          "min_T"_a, "max_T"_a, "log_history"_a);
+
+    // SampleByIntegerSA for IntegerPolynomialModel
+    m.def("sample_by_integer_sa_polynomial", 
+          &sampler::SampleByIntegerSA<graph::IntegerPolynomialModel>,
+          "model"_a, "num_sweeps"_a, "update_method"_a, "rand_type"_a,
+          "schedule"_a, "num_reads"_a, "seed"_a, "num_threads"_a, 
+          "min_T"_a, "max_T"_a, "log_history"_a);
+}
+
 
 template<class ModelType>
 void declare_SASampler(py::module &m, const std::string &post_name = "") {
@@ -977,7 +1046,9 @@ void declare_SASampler(py::module &m, const std::string &post_name = "") {
 void declare_UpdateMethod(py::module &m) {
    py::enum_<algorithm::UpdateMethod>(m, "UpdateMethod")
       .value("METROPOLIS", algorithm::UpdateMethod::METROPOLIS)
-      .value("HEAT_BATH", algorithm::UpdateMethod::HEAT_BATH);
+      .value("HEAT_BATH", algorithm::UpdateMethod::HEAT_BATH)
+      .value("SUWA_TODO", algorithm::UpdateMethod::HEAT_BATH)
+      .value("OPT_METROPOLIS", algorithm::UpdateMethod::OPT_METROPOLIS);
 }
 
 void declare_RandomNumberEngine(py::module &m) {

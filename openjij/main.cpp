@@ -50,10 +50,14 @@ PYBIND11_MODULE(cxxjij, m) {
 
   openjij::declare_BinaryPolynomialModel<openjij::FloatType>(m_graph);
   openjij::declare_IsingPolynomialModel<openjij::FloatType>(m_graph);
+  openjij::declare_IntegerQuadraticModel(m_graph);
+  openjij::declare_IntegerPolynomialModel(m_graph);
 
   py::module_ m_sampler = m.def_submodule("sampler");
+  openjij::declare_IntegerSAResult(m_sampler);
   openjij::declare_SASampler<openjij::graph::BinaryPolynomialModel<openjij::FloatType>>(m_sampler, "BPM");
   openjij::declare_SASampler<openjij::graph::IsingPolynomialModel<openjij::FloatType>>(m_sampler, "IPM");
+  openjij::declare_SampleByIntegerSA(m_sampler);
 
   /**********************************************************
    //namespace system
