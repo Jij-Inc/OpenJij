@@ -17,14 +17,16 @@
 namespace openjij {
 namespace test {
 
-TEST(Sampler, IntegerSASamplerQuadratic) {
+TEST(Sampler, IntegerSASamplerPolynomial) {
 
-  std::vector<std::vector<std::int64_t>> key_list = {{0, 0}, {1, 0}, {2}, {}};
+  std::vector<std::vector<std::int64_t>> key_list = {
+      {0, 0, 0}, {1, 0, 1}, {1, 2, 3}, {4, 4}, {1, 3}, {2}, {},
+  };
 
-  std::vector<double> value_list = {1.0, -1.0, 3.0, 0.5};
+  std::vector<double> value_list = {1.0, -1.0, 3.0, -1.5, 0.5, 2.5, 0.5};
 
   std::vector<std::pair<std::int64_t, std::int64_t>> bounds = {
-      {0, 1}, {0, 1}, {0, 2}};
+      {0, 1}, {0, 1}, {0, 2}, {-1, 3}, {-2, 2}, {4, 7}, {6, 7}};
 
   std::vector<algorithm::RandomNumberEngine> engine_list = {
       algorithm::RandomNumberEngine::XORSHIFT,
@@ -37,7 +39,7 @@ TEST(Sampler, IntegerSASamplerQuadratic) {
       utility::TemperatureSchedule::LINEAR,
       utility::TemperatureSchedule::GEOMETRIC};
 
-  graph::IntegerQuadraticModel model(key_list, value_list, bounds);
+  graph::IntegerPolynomialModel model(key_list, value_list, bounds);
   for (const auto &engine : engine_list) {
     for (const auto &algorithm : updater_list) {
       for (const auto &schedule : schedule_list) {

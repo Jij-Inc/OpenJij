@@ -17,6 +17,7 @@
 #include "binary_polynomial_sa_sampler.hpp"
 #include "ising_polynomial_sa_sampler.hpp"
 #include "integer_quadratic_sa_sampler.hpp"
+#include "integer_polynomial_sa_sampler.hpp"
 #include "quadraitc.hpp"
 #include "polynomial.hpp"
 #include "k_local.hpp"
