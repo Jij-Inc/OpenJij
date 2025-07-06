@@ -14,70 +14,39 @@
 
 #pragma once
 
-
 namespace openjij {
 namespace test {
 
 TEST(Sampler, IntegerSASamplerOperation) {
-   
-   std::vector<std::vector<std::int64_t>> key_list = {
-      {0, 0},
-      {1, 0},
-      {2},
-      {}
-   };
-   
-   std::vector<double> value_list = {
-      1.0,
-      -1.0,
-      3.0,
-      0.5
-   };
-   
-   std::vector<std::pair<std::int64_t, std::int64_t>> bounds = {
-      {0, 1},
-      {0, 1},
-      {0, 2}
-   };
-   
-   std::vector<algorithm::RandomNumberEngine> engine_list = {
+
+  std::vector<std::vector<std::int64_t>> key_list = {{0, 0}, {1, 0}, {2}, {}};
+
+  std::vector<double> value_list = {1.0, -1.0, 3.0, 0.5};
+
+  std::vector<std::pair<std::int64_t, std::int64_t>> bounds = {
+      {0, 1}, {0, 1}, {0, 2}};
+
+  std::vector<algorithm::RandomNumberEngine> engine_list = {
       algorithm::RandomNumberEngine::XORSHIFT,
-      algorithm::RandomNumberEngine::MT,
-      algorithm::RandomNumberEngine::MT_64
-   };
-   
-   std::vector<algorithm::UpdateMethod> updater_list = {
-      algorithm::UpdateMethod::METROPOLIS,
-      algorithm::UpdateMethod::HEAT_BATH
-   };
-   
-   std::vector<utility::TemperatureSchedule> schedule_list = {
+      algorithm::RandomNumberEngine::MT, algorithm::RandomNumberEngine::MT_64};
+
+  std::vector<algorithm::UpdateMethod> updater_list = {
+      algorithm::UpdateMethod::METROPOLIS, algorithm::UpdateMethod::HEAT_BATH};
+
+  std::vector<utility::TemperatureSchedule> schedule_list = {
       utility::TemperatureSchedule::LINEAR,
-      utility::TemperatureSchedule::GEOMETRIC
-   };
-   
-   graph::IntegerQuadraticModel model(key_list, value_list, bounds);
-   for (const auto &engine: engine_list) {
-      for (const auto &algorithm: updater_list) {
-         for (const auto &schedule: schedule_list) {
-            EXPECT_NO_THROW(sampler::SampleByIntegerSA(model,
-                                       100,
-                                       algorithm,
-                                       engine,
-                                       schedule,
-                                       2,
-                                       0,
-                                       2,
-                                       0.1,
-                                       5.0,
-                                       false
-                                       ));
-            
-         }
+      utility::TemperatureSchedule::GEOMETRIC};
+
+  graph::IntegerQuadraticModel model(key_list, value_list, bounds);
+  for (const auto &engine : engine_list) {
+    for (const auto &algorithm : updater_list) {
+      for (const auto &schedule : schedule_list) {
+        EXPECT_NO_THROW(sampler::SampleByIntegerSA(
+            model, 100, algorithm, engine, schedule, 2, 0, 2, 0.1, 5.0, false));
       }
-   }
-   
+    }
+  }
 }
 
-}
-}
+} // namespace test
+} // namespace openjij

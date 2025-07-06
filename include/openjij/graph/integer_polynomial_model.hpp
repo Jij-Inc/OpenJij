@@ -14,123 +14,138 @@
 
 #pragma once
 
-
 namespace openjij {
 namespace graph {
 
 class IntegerPolynomialModel {
-   
+
 public:
-   
-   IntegerPolynomialModel(std::vector<std::vector<std::int64_t>> &key_list,
-                          std::vector<double> &value_list,
-                          std::vector<std::pair<std::int64_t, std::int64_t>> &bounds) {
-      if (key_list.size() != value_list.size()) {
-         throw std::runtime_error("Key and value lists must have the same size.");
+  IntegerPolynomialModel(
+      std::vector<std::vector<std::int64_t>> &key_list,
+      std::vector<double> &value_list,
+      std::vector<std::pair<std::int64_t, std::int64_t>> &bounds) {
+    if (key_list.size() != value_list.size()) {
+      throw std::runtime_error("Key and value lists must have the same size.");
+    }
+
+    std::unordered_set<std::int64_t> index_set;
+    for (const auto &key : key_list) {
+      index_set.insert(key.begin(), key.end());
+    }
+
+    this->bounds_ = bounds;
+
+    this->index_list_ =
+        std::vector<std::int64_t>(index_set.begin(), index_set.end());
+    std::sort(this->index_list_.begin(), this->index_list_.end());
+
+    this->num_variables_ = this->index_list_.size();
+
+    this->constant_ = 0.0;
+    for (std::size_t i = 0; i < key_list.size(); ++i) {
+      if (key_list[i].empty()) {
+        this->constant_ += value_list[i];
+      } else {
+        // Count occurrences of each index
+        std::unordered_map<std::int64_t, std::int64_t> index_count;
+        for (const auto &k : key_list[i]) {
+          index_count[k]++;
+        }
+
+        // Convert to vector of pairs
+        std::vector<std::pair<std::int64_t, std::int64_t>> int_keys;
+        for (const auto &[index, degree] : index_count) {
+          int_keys.emplace_back(index, degree);
+        }
+
+        std::sort(int_keys.begin(), int_keys.end());
+
+        this->key_value_list_.emplace_back(int_keys, value_list[i]);
       }
-      
-      std::unordered_set<std::int64_t> index_set;
-      for (const auto &key : key_list) {
-         index_set.insert(key.begin(), key.end());
+    }
+
+    // Sort by number of variables
+    std::sort(this->key_value_list_.begin(), this->key_value_list_.end(),
+              [](const auto &a, const auto &b) {
+                return a.first.size() < b.first.size();
+              });
+
+    // Create index_to_interactions
+    this->index_to_interactions_.resize(this->num_variables_);
+    for (std::size_t i = 0; i < this->key_value_list_.size(); ++i) {
+      for (const auto &[index, degree] : this->key_value_list_[i].first) {
+        this->index_to_interactions_[index].emplace_back(i, degree);
       }
-      
-      this->bounds_ = bounds;
-      
-      this->index_list_ = std::vector<std::int64_t>(index_set.begin(), index_set.end());
-      std::sort(this->index_list_.begin(), this->index_list_.end());
-      
-      this->num_variables_ = this->index_list_.size();
-      
-      this->constant_ = 0.0;
-      for (std::size_t i = 0; i < key_list.size(); ++i) {
-         if (key_list[i].empty()) {
-            this->constant_ += value_list[i];
-         } else {
-            // Count occurrences of each index
-            std::unordered_map<std::int64_t, std::int64_t> index_count;
-            for (const auto &k : key_list[i]) {
-               index_count[k]++;
-            }
-            
-            // Convert to vector of pairs
-            std::vector<std::pair<std::int64_t, std::int64_t>> int_keys;
-            for (const auto &[index, degree] : index_count) {
-               int_keys.emplace_back(index, degree);
-            }
-            
-            std::sort(int_keys.begin(), int_keys.end());
-            
-            this->key_value_list_.emplace_back(int_keys, value_list[i]);
-         }
+    }
+
+    // Sort index_to_interactions
+    for (auto &interactions : this->index_to_interactions_) {
+      std::sort(interactions.begin(), interactions.end());
+    }
+
+    // Create only_multilinear_index_set and under_quadratic_index_set
+    for (std::int64_t index = 0; index < this->num_variables_; ++index) {
+      bool is_multilinear = true;
+      for (const auto &[_, degree] : this->index_to_interactions_[index]) {
+        if (degree != 1) {
+          is_multilinear = false;
+          break;
+        }
       }
-      
-      
-      // Sort by number of variables
-      std::sort(this->key_value_list_.begin(), this->key_value_list_.end(),
-                [](const auto &a, const auto &b) { return a.first.size() < b.first.size(); });
-      
-      // Create index_to_interactions
-      this->index_to_interactions_.resize(this->num_variables_);
-      for (std::size_t i = 0; i < this->key_value_list_.size(); ++i) {
-         for (const auto &[index, degree] : this->key_value_list_[i].first) {
-            this->index_to_interactions_[index].emplace_back(i, degree);
-         }
+      if (is_multilinear) {
+        this->only_multilinear_index_set_.insert(index);
       }
-      
-      // Sort index_to_interactions
-      for (auto &interactions : this->index_to_interactions_) {
-         std::sort(interactions.begin(), interactions.end());
+
+      bool is_under_quadratic = true;
+      for (const auto &[_, degree] : this->index_to_interactions_[index]) {
+        if (degree > 2) {
+          is_under_quadratic = false;
+          break;
+        }
       }
-      
-      // Create only_multilinear_index_set and under_quadratic_index_set
-      for (std::int64_t index = 0; index < this->num_variables_; ++index) {
-         bool is_multilinear = true;
-         for (const auto &[_, degree] : this->index_to_interactions_[index]) {
-            if (degree != 1) {
-               is_multilinear = false;
-               break;
-            }
-         }
-         if (is_multilinear) {
-            this->only_multilinear_index_set_.insert(index);
-         }
-         
-         bool is_under_quadratic = true;
-         for (const auto &[_, degree] : this->index_to_interactions_[index]) {
-            if (degree > 2) {
-               is_under_quadratic = false;
-               break;
-            }
-         }
-         if (is_under_quadratic) {
-            this->under_quadratic_index_set_.insert(index);
-         }
+      if (is_under_quadratic) {
+        this->under_quadratic_index_set_.insert(index);
       }
-   }
-   
-   const std::vector<std::int64_t> &GetIndexList() const { return this->index_list_; }
-   std::int64_t GetNumVariables() const { return this->num_variables_; }
-   const std::vector<std::pair<std::int64_t, std::int64_t>> &GetBounds() const { return this->bounds_; }
-   double GetConstant() const { return this->constant_; }
-   const std::vector<std::pair<std::vector<std::pair<std::int64_t, std::int64_t>>, double>> &GetKeyValueList() const { return this->key_value_list_; }
-   const std::vector<std::vector<std::pair<std::size_t, std::int64_t>>> &GetIndexToInteractions() const { return this->index_to_interactions_; }
-   const std::unordered_set<std::int64_t> &GetOnlyMultilinearIndexSet() const { return this->only_multilinear_index_set_; }
-   const std::unordered_set<std::int64_t> &GetUnderQuadraticIndexSet() const { return this->under_quadratic_index_set_; }
-   
+    }
+  }
+
+  const std::vector<std::int64_t> &GetIndexList() const {
+    return this->index_list_;
+  }
+  std::int64_t GetNumVariables() const { return this->num_variables_; }
+  const std::vector<std::pair<std::int64_t, std::int64_t>> &GetBounds() const {
+    return this->bounds_;
+  }
+  double GetConstant() const { return this->constant_; }
+  const std::vector<
+      std::pair<std::vector<std::pair<std::int64_t, std::int64_t>>, double>> &
+  GetKeyValueList() const {
+    return this->key_value_list_;
+  }
+  const std::vector<std::vector<std::pair<std::size_t, std::int64_t>>> &
+  GetIndexToInteractions() const {
+    return this->index_to_interactions_;
+  }
+  const std::unordered_set<std::int64_t> &GetOnlyMultilinearIndexSet() const {
+    return this->only_multilinear_index_set_;
+  }
+  const std::unordered_set<std::int64_t> &GetUnderQuadraticIndexSet() const {
+    return this->under_quadratic_index_set_;
+  }
+
 private:
-   std::vector<std::int64_t> index_list_;
-   std::int64_t num_variables_;
-   std::vector<std::pair<std::int64_t, std::int64_t>> bounds_;
-   double constant_;
-   std::vector<std::pair<std::vector<std::pair<std::int64_t, std::int64_t>>, double>> key_value_list_;
-   std::vector<std::vector<std::pair<std::size_t, std::int64_t>>> index_to_interactions_;
-   std::unordered_set<std::int64_t> only_multilinear_index_set_;
-   std::unordered_set<std::int64_t> under_quadratic_index_set_;
+  std::vector<std::int64_t> index_list_;
+  std::int64_t num_variables_;
+  std::vector<std::pair<std::int64_t, std::int64_t>> bounds_;
+  double constant_;
+  std::vector<
+      std::pair<std::vector<std::pair<std::int64_t, std::int64_t>>, double>>
+      key_value_list_;
+  std::vector<std::vector<std::pair<std::size_t, std::int64_t>>>
+      index_to_interactions_;
+  std::unordered_set<std::int64_t> only_multilinear_index_set_;
+  std::unordered_set<std::int64_t> under_quadratic_index_set_;
 };
 
-
-
-
-
-}
-}
+} // namespace graph
+} // namespace openjij
