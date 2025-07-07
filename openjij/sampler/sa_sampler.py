@@ -584,6 +584,11 @@ class SASampler(BaseSampler):
 
         start_solving = time.perf_counter()
 
+        if not isinstance(J, dict):
+            raise TypeError("J must be a dictionary of interactions.")
+        if len(J) == 0:
+            raise ValueError("J must not be an empty dictionary.")
+
         # Summarize interactions
         summarize_interactions = defaultdict(float)
         index_set = set()
@@ -615,6 +620,8 @@ class SASampler(BaseSampler):
             index = self.index_list[i]
             if index not in bound_list:
                 raise ValueError(f"Index {index} not found in bound_list.")
+            if bound_list[index][0] >= bound_list[index][1]:
+                raise ValueError(f"Index {index} has no variable range.")
             int_bound_list.append(
                 (bound_list[index][0], bound_list[index][1])
             )
@@ -639,9 +646,9 @@ class SASampler(BaseSampler):
             if beta_max is None:
                 min_T = min_coeff / math.log(100)
         if beta_min is not None:
-            min_T = beta_min
+            min_T = 1.0/beta_min
         if beta_max is not None:
-            max_T = beta_max
+            max_T = 1.0/beta_max
 
         if seed is None:
             seed = np.random.randint(0, 2**32 - 1)
