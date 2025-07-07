@@ -642,13 +642,13 @@ class SASampler(BaseSampler):
         if beta_min is None or beta_max is None:
             max_coeff, min_coeff = cxx_model.get_max_min_coeffs()
             if beta_min is None:
-                max_T = max_coeff / math.log(4)
+                max_T = max_coeff / math.log(2)
             if beta_max is None:
                 min_T = min_coeff / math.log(100)
         if beta_min is not None:
-            min_T = 1.0/beta_min
+            max_T = 1.0/beta_min
         if beta_max is not None:
-            max_T = 1.0/beta_max
+            min_T = 1.0/beta_max
 
         if seed is None:
             seed = np.random.randint(0, 2**32 - 1)
