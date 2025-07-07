@@ -62,28 +62,12 @@ struct OptMetropolisUpdater {
   std::uniform_real_distribution<double> dist{0.0, 1.0};
 };
 
-template <typename T>
-struct is_integer_quadratic_model_system : std::false_type {};
-
-template <typename RandType>
-struct is_integer_quadratic_model_system<
-    system::IntegerSASystem<graph::IntegerQuadraticModel, RandType>>
-    : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_integer_quadratic_model_system_v =
-    is_integer_quadratic_model_system<T>::value;
-
 struct HeatBathUpdater {
   template <typename SystemType>
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double _progress) {
-    if constexpr (is_integer_quadratic_model_system_v<SystemType>) {
-      if (std::abs(sa_system.GetQuadCoeff()[index]) < 1e-10) {
+    if (sa_system.OnlyMultiLinearCoeff(index)) {
         return ForBilinear(sa_system, index, T, _progress);
-      } else {
-        return ForAll(sa_system, index, T, _progress);
-      }
     } else {
       return ForAll(sa_system, index, T, _progress);
     }
@@ -114,13 +98,12 @@ struct HeatBathUpdater {
     return var.GetValueFromState(selected_state_number);
   }
 
-  template <typename RandType>
-  std::int64_t ForBilinear(system::IntegerSASystem<graph::IntegerQuadraticModel,
-                                                   RandType> &sa_system,
+  template <typename SystemType>
+  std::int64_t ForBilinear(SystemType &sa_system,
                            const std::int64_t index, const double T,
                            const double _progress) {
     const auto &state = sa_system.GetState()[index];
-    const double linear_coeff = sa_system.GetLinearCoeff()[index];
+    const double linear_coeff = sa_system.GetLinearCoeff(index);
 
     if (std::abs(linear_coeff) < 1e-10) {
       return state.GenerateRandomValue(sa_system.random_number_engine);
