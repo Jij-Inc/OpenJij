@@ -100,56 +100,31 @@ struct HeatBathUpdater {
 
   template <typename SystemType>
   std::int64_t ForBilinear(SystemType &sa_system,
-                           const std::int64_t index, const double T,
-                           const double _progress) {
-    const auto &state = sa_system.GetState()[index];
-    const double linear_coeff = sa_system.GetLinearCoeff(index);
+                          const std::int64_t index, const double T,
+                          const double _progress) {
+      const auto &state = sa_system.GetState()[index];
+      const double linear_coeff = sa_system.GetLinearCoeff(index);
 
-    if (std::abs(linear_coeff) < 1e-10) {
-      return state.GenerateRandomValue(sa_system.random_number_engine);
-    }
+      if (std::abs(linear_coeff) < 1e-10) {
+          return state.GenerateRandomValue(sa_system.random_number_engine);
+      }
 
-    const double b = linear_coeff;
-    const std::int64_t dxl = state.lower_bound - state.value;
-    const std::int64_t dxu = state.upper_bound - state.value;
-    const double beta = 1.0 / T;
+      const double b = -linear_coeff * (1.0 / T);
+      const double dxl = static_cast<double>(state.lower_bound - state.value);
+      const double dxu = static_cast<double>(state.upper_bound - state.value);
 
-    auto p_sum = [&](std::int64_t u) -> double {
+      const double u = this->dist(sa_system.random_number_engine);
+
+      double selected_dz = 0.0;
       if (b > 0) {
-        const double a1 = std::exp(-beta * b * (u - dxl + 1));
-        const double a2 = std::exp(-beta * b);
-        return (1 - a1) / (1 - a2);
+          selected_dz = dxu + std::log(u + (1.0 - u) * std::exp(-b * (dxu - dxl + 1))) / b;
       } else {
-        const double a1 = std::exp(beta * b * (u - dxl + 1));
-        const double a2 = std::exp(beta * b);
-        const double a3 = std::exp(-beta * b * (u - dxu));
-        return a3 * (a1 - 1) / (a2 - 1);
+          selected_dz = dxl - 1.0 + std::log(1.0 - u * (1.0 - std::exp(b * (dxu - dxl + 1)))) / b;
       }
-    };
 
-    const double rand_value = dist(sa_system.random_number_engine) * p_sum(dxu);
-
-    const std::int64_t n = state.num_states;
-    std::int64_t low = 0;
-    std::int64_t high = n - 1;
-    std::int64_t selected_state_number = n;
-    const std::int64_t current_value = state.value;
-
-    while (low <= high) {
-      const std::int64_t mid = low + (high - low) / 2;
-      if (p_sum(state.GetValueFromState(mid) - current_value) > rand_value) {
-        selected_state_number = mid;
-        high = mid - 1;
-      } else {
-        low = mid + 1;
-      }
-    }
-
-    if (selected_state_number == n) {
-      selected_state_number = n - 1;
-    }
-
-    return state.GetValueFromState(selected_state_number);
+      selected_dz = static_cast<std::int64_t>(std::ceil(std::max(dxl, std::min(selected_dz, dxu))));
+      
+      return state.value + selected_dz;
   }
 
   std::uniform_real_distribution<double> dist{0.0, 1.0};
