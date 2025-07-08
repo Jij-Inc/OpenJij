@@ -621,7 +621,10 @@ def geometric_ising_beta_schedule(
 
             # Calculate quadratic and linear term energy difference separately
             dE_quad = (ising_interaction[:-1, :-1] @ random_spin[:-1, :] * (-2 * random_spin[:-1, :]))
-            dE_linear = (ising_interaction[:-1, -1].toarray() * random_spin[:-1])
+            if isinstance(ising_interaction, np.ndarray):
+                dE_linear = (ising_interaction[:-1, -1][:, np.newaxis] * random_spin[:-1])
+            else:
+                dE_linear = (ising_interaction[:-1, -1].toarray() * random_spin[:-1])
 
             dE_quad_abs = np.abs(dE_quad)
             rate_dE = np.max(np.abs(dE_linear[dE_quad_abs > THRESHOLD]) /(dE_quad_abs[dE_quad_abs > THRESHOLD].mean() + THRESHOLD))
@@ -698,14 +701,5 @@ def geometric_ising_beta_schedule(
         one_mc_step=num_sweeps_per_beta,
         num_call_updater=num_sweeps // num_sweeps_per_beta,
     )
-
-    # add local search schedule
-    abs_int = np.abs(ising_interaction.toarray().flatten())
-    epsilon = 1e-8
-    min_int = np.min(abs_int[abs_int > epsilon])
-    _schedule = cxxjij.utility.ClassicalSchedule()
-    _schedule.one_mc_step = n // 10
-    _schedule.updater_parameter.beta = np.log(100)/min_int
-    schedule.append(_schedule)
 
     return schedule, [beta_max, beta_min]
