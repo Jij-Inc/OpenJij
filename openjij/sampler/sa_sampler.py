@@ -227,6 +227,7 @@ class SASampler(BaseSampler):
                 beta_max=self._params["beta_max"],
                 beta_min=self._params["beta_min"],
                 num_sweeps=self._params["num_sweeps"],
+                seed=seed,
             )
             self.schedule_info = {
                 "beta_max": beta_range[0],
@@ -458,6 +459,7 @@ class SASampler(BaseSampler):
                 self._params["beta_max"],
                 self._params["beta_min"],
                 self._params["num_sweeps"],
+                seed=seed,
             )
             self.schedule_info = {
                 "beta_max": beta_range[0],
@@ -556,98 +558,8 @@ class SASampler(BaseSampler):
                 temperature_schedule=temperature_schedule
             )
 
-def geometric_ising_beta_schedule(
-    cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
-    beta_max=None,
-    beta_min=None,
-    num_sweeps=1000,
-):
-    """Make geometric cooling beta schedule.
 
-    Args:
-        cxxgraph (Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse]): Ising graph, must be either `Dense` or `CSRSparse`.
-        beta_max (float, optional): [description]. Defaults to None.
-        beta_min (float, optional): [description]. Defaults to None.
-        num_sweeps (int, optional): [description]. Defaults to 1000.
-    Returns:
-        list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
-    """
-    min_delta_energy = 1.0
-    max_delta_energy = 1.0
-    # generate Ising matrix (with symmetric form)
-    ising_interaction = cxxgraph.get_interactions()
-    if beta_min is None or beta_max is None:
-        # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
-        if ising_interaction.shape[0] <= 1:
-            min_delta_energy = 1
-            max_delta_energy = 1
-        else:
-            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
-            random_spin[-1, :] = 1  # last element is bias term
-            # calculate delta energy
-            dE = (2 * ising_interaction @ random_spin * (-2 * random_spin))
-            dE = dE[:-1, :]  # remove the last element (bias term)
-
-            THRESHOLD = 1e-8
-            dE_positive = dE[dE > THRESHOLD]
-
-            if len(dE_positive) == 0:
-                min_delta_energy = 1
-                max_delta_energy = 1.1
-            else:
-                dE_mean = np.mean(dE_positive, axis=0).mean()
-                dE_std = np.std(dE_positive, axis=0).mean()
-                cv = dE_std / dE_mean
-                if cv >= 1.0:
-                    # if the coefficient of variation is large, use the mean of positive dE
-                    max_delta_energy = dE_mean + dE_std
-                else:
-                    # if the coefficient of variation is small, use the mean of positive dE
-                    # to avoid extremely large beta_max
-                    max_delta_energy = dE_mean
-
-                abs_int = np.abs(ising_interaction[:-1, :-1])
-                abs_int = abs_int[abs_int >= THRESHOLD]
-                dE_min = np.min(dE_positive, axis=0).mean()
-                comp_min = np.min(abs_int) * 2
-                if dE_min < comp_min:
-                    min_delta_energy = dE_min
-                else:
-                    min_delta_energy = np.sqrt(comp_min * dE_min)
-
-    n = ising_interaction.shape[0]  # n+1
-
-    prob_init_base = 0.6
-    dP_init = 0.99 - prob_init_base
-    sigma = np.log(n + 1)
-    prob_init = prob_init_base + dP_init / 2 * np.tanh(np.log(num_sweeps/(n+1))/sigma + 0.1)
-
-    prob_final_base = 1 / 100
-    dP_final = min(0.001, 1/n) - prob_final_base
-    sigma = np.log(n + 1)
-    prob_final = prob_final_base + dP_final / 2 * np.tanh(np.log(num_sweeps/(n+1))/sigma + 0.1)
-
-
-    if beta_min is None:
-        beta_min = -np.log(prob_init) / max_delta_energy
-
-    if beta_max is None:
-        beta_max = -np.log(prob_final) / min_delta_energy 
-
-    num_sweeps_per_beta = max(1, num_sweeps // 1000)
-
-    # set schedule to cxxjij
-    schedule = cxxjij.utility.make_classical_schedule_list(
-        beta_min=beta_min,
-        beta_max=beta_max,
-        one_mc_step=num_sweeps_per_beta,
-        num_call_updater=num_sweeps // num_sweeps_per_beta,
-    )
-
-    return schedule, [beta_max, beta_min]
-
-
-def geometric_hubo_beta_schedule(sa_system, beta_max, beta_min, num_sweeps):
+def geometric_hubo_beta_schedule(sa_system, beta_max, beta_min, num_sweeps, seed=None):
     max_delta_energy = sa_system.get_max_effective_dE()
     min_delta_energy = sa_system.get_min_effective_dE()
 
@@ -659,6 +571,130 @@ def geometric_hubo_beta_schedule(sa_system, beta_max, beta_min, num_sweeps):
 
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
 
+    schedule = cxxjij.utility.make_classical_schedule_list(
+        beta_min=beta_min,
+        beta_max=beta_max,
+        one_mc_step=num_sweeps_per_beta,
+        num_call_updater=num_sweeps // num_sweeps_per_beta,
+    )
+
+    return schedule, [beta_max, beta_min]
+
+
+def geometric_ising_beta_schedule(
+    cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
+    beta_max=None,
+    beta_min=None,
+    num_sweeps=1000,
+    seed=None,
+):
+    """Make geometric cooling beta schedule.
+
+    Args:
+        cxxgraph (Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse]): Ising graph, must be either `Dense` or `CSRSparse`.
+        beta_max (float, optional): [description]. Defaults to None.
+        beta_min (float, optional): [description]. Defaults to None.
+        num_sweeps (int, optional): [description]. Defaults to 1000.
+        seed (int, optional): Seed for random number generation. Defaults to None.
+    Returns:
+        list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
+    """
+
+    # Set seed
+    if seed is not None:
+        np.random.seed(seed)
+
+    THRESHOLD = 1e-8
+    dE_max = 1.0
+    dE_min = 1.0
+    ising_interaction = cxxgraph.get_interactions()
+    rate_dE = 0.5
+
+    if beta_min is None or beta_max is None:
+        # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
+        if ising_interaction.shape[0] <= 1:
+            dE_max = 1
+            dE_min = 1
+        else:
+            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
+            random_spin[-1, :] = 1  # last element is bias term
+
+            # Calculate quadratic and linear term energy difference separately
+            dE_quad = (ising_interaction[:-1, :-1] @ random_spin[:-1, :] * (-2 * random_spin[:-1, :]))
+            if isinstance(ising_interaction, np.ndarray):
+                dE_linear = (ising_interaction[:-1, -1][:, np.newaxis] * random_spin[:-1])
+            else:
+                dE_linear = (ising_interaction[:-1, -1].toarray() * random_spin[:-1])
+
+            dE_quad_abs = np.abs(dE_quad)
+            rate_dE = np.max(np.abs(dE_linear[dE_quad_abs > THRESHOLD]) /(dE_quad_abs[dE_quad_abs > THRESHOLD].mean() + THRESHOLD))
+
+            dE = dE_quad
+            dE_positive = dE[dE > THRESHOLD]
+
+            if len(dE_positive) == 0:
+                dE_min = 1
+                dE_max = 1.1
+            else:
+                dE_max = np.median(dE_positive, axis=0).mean()
+                dE_min = np.min(dE_positive, axis=0).mean()
+
+
+    n = ising_interaction.shape[0]  # n+1
+
+    prob_init = 9/10 - 8/10 * np.tanh(rate_dE/50) + THRESHOLD
+    prob_final = 1 / 1000
+
+    if beta_min is None:
+        p_init = prob_init
+        # 二分探索で 2 beta p_init = exp(-beta dE) - exp(-beta dE_max)を解く
+        # Binary search to find beta where f = 0
+        beta_low, beta_high = -np.log(prob_init) / dE_max, -np.log(prob_init) / dE_min
+        tolerance = 1e-8
+        max_iterations = 5
+        for iteration in range(max_iterations):
+            _beta = (beta_low + beta_high) / 2
+            f = 2 * _beta * p_init - np.exp(-_beta * dE_min) + np.exp(-_beta * dE_max)
+            if abs(f) < tolerance:
+                break
+            if f > 0:
+                beta_high = _beta
+            else:
+                beta_low = _beta
+        beta_min = beta_low
+
+        beta_min_min = beta_min * 0.8
+        beta_min = beta_min_min + (beta_min * 1.5 - beta_min_min) * np.tanh(num_sweeps / n)
+
+    if beta_max is None:
+        int_abs = np.abs(ising_interaction)
+        int_min = np.min(int_abs[int_abs > THRESHOLD])
+
+        int_min = max(int_min, dE_min / 10.0)
+
+        beta_max_int = -np.log(prob_final) / int_min
+        beta_max_dE = -np.log(prob_final) / dE_min
+
+        if rate_dE < 2:
+            beta_max_min = min(beta_max_dE, beta_max_int)
+            beta_max_max = max(beta_max_dE, beta_max_int)
+            beta_max = beta_max_min + (beta_max_max - beta_max_min) * np.tanh(num_sweeps / (2 * n))
+        else:
+            last_step = min(100, num_sweeps // 10 + 1)
+            # last_stepだけ繰り返した時に少なくとも1度フリップする確率を計算
+            # 1stepでは exp(-beta dE) でフリップするとする.
+            _dE = max(dE_min, int_min)
+            beta_max = -np.log(prob_final) / _dE / last_step
+
+        if beta_max < beta_min:
+            beta_max = beta_min * 10.0
+
+    if rate_dE > 1:
+        beta_min *= rate_dE
+        beta_max *= rate_dE
+
+    num_sweeps_per_beta = max(1, num_sweeps // 1000)
+    # set schedule to cxxjij
     schedule = cxxjij.utility.make_classical_schedule_list(
         beta_min=beta_min,
         beta_max=beta_max,
