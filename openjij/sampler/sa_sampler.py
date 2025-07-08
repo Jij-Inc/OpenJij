@@ -499,7 +499,7 @@ class SASampler(BaseSampler):
         seed: Optional[int] = None,
         temperature_schedule: str = "GEOMETRIC",
     ):  
-        """Sampling from higher order unconstrainted binary optimization.
+        """Sampling from higher order unconstrained binary optimization.
 
         Args:
             J (dict): Interactions.
@@ -524,7 +524,7 @@ class SASampler(BaseSampler):
                 >>> response = sampler.sample_hubo(J, "SPIN")
 
             for Binary case::
-                >>> sampler = ooenjij.SASampler()
+                >>> sampler = openjij.SASampler()
                 >>> J = {(0,): -1, (0, 1): -1, (0, 1, 2): 1}
                 >>> response = sampler.sample_hubo(J, "BINARY")
         """
@@ -723,6 +723,35 @@ class SASampler(BaseSampler):
         temperature_schedule: str = "GEOMETRIC",
         log_history: bool = False,
     ) -> "oj.sampler.response.Response":
+        """Sampling from quadratic unconstrained integer optimization (QUIO).
+        This method solves integer optimization problems with interactions up to quadratic order (linear and quadratic terms only).
+
+        Args:
+            J (dict): Interactions. Keys are tuples of variable indices, values are interaction coefficients.
+            bound_list (dict): Variable bounds. Keys are variable indices, values are tuples of (lower_bound, upper_bound) for integer variables.
+            num_sweeps (int, optional): The number of sweeps. Defaults to 1000.
+            num_reads (int, optional): The number of reads. Defaults to 1.
+            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to 1.
+            beta_min (float, optional): Minimum beta (initial inverse temperature). Defaults to None.
+            beta_max (float, optional): Maximum beta (final inverse temperature). Defaults to None.
+            updater (str, optional): Updater. One can choose "METROPOLIS", "OPT_METROPOLIS", "HEAT_BATH", and "SUWA_TODO". Defaults to "OPT_METROPOLIS".
+            random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
+            seed (int, optional): Seed for Monte Carlo algorithm. Defaults to None.
+            temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
+            log_history (bool, optional): If True, logs the energy and temperature history. Defaults to False.
+
+        Returns:
+            :class:`openjij.sampler.response.Response`: results
+
+        Examples::
+            To solve f(x) = -x_0 - x_0*x_1 + x_1*x_2 with bounds:
+            x_0 in [-10, 10], x_1 in [3, 10], use the following code:
+            >>> import openjij
+            >>> sampler = openjij.SASampler()
+            >>> J = {(0,): -1, (0, 1): -1, (1, 2): 1}
+            >>> bound_list = {0: (-10, 10), 1: (3, 10), 2: (-2, -1)}
+            >>> response = sampler.sample_quio(J, bound_list)
+        """
         return self._base_integer_sampler(
             J=J,
             bound_list=bound_list,
@@ -755,6 +784,35 @@ class SASampler(BaseSampler):
         temperature_schedule: str = "GEOMETRIC",
         log_history: bool = False,
     ) -> "oj.sampler.response.Response":
+        """Sampling from higher-order unconstrained integer optimization (HUIO).
+        This method solves integer optimization problems that can include variable interactions of any order (linear, quadratic, cubic, and higher).
+        
+        Args:
+            J (dict): Interactions. Keys are tuples of variable indices, values are interaction coefficients.
+            bound_list (dict): Variable bounds. Keys are variable indices, values are tuples of (lower_bound, upper_bound) for integer variables.
+            num_sweeps (int, optional): The number of sweeps. Defaults to 1000.
+            num_reads (int, optional): The number of reads. Defaults to 1.
+            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to 1.
+            beta_min (float, optional): Minimum beta (initial inverse temperature). Defaults to None.
+            beta_max (float, optional): Maximum beta (final inverse temperature). Defaults to None.
+            updater (str, optional): Updater. One can choose "METROPOLIS", "OPT_METROPOLIS", "HEAT_BATH", and "SUWA_TODO". Defaults to "OPT_METROPOLIS".
+            random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
+            seed (int, optional): Seed for Monte Carlo algorithm. Defaults to None.
+            temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
+            log_history (bool, optional): If True, logs the energy and temperature history. Defaults to False.
+
+        Returns:
+            :class:`openjij.sampler.response.Response`: results
+
+        Examples::
+            To solve f(x) = -x_0 - x_0*x_1 + x_0*x_1*x_2 with bounds:
+            x_0 in [-10, 10], x_1 in [3, 10], x_2 in [-2, -1], use the following code:
+            >>> import openjij
+            >>> sampler = openjij.SASampler()
+            >>> J = {(0,): -1, (0, 1): -1, (0, 1, 2): 1}
+            >>> bound_list = {0: (-10, 10), 1: (3, 10), 2: (-2, -1)}
+            >>> response = sampler.sample_huio(J, bound_list)
+        """
         return self._base_integer_sampler(
             J=J,
             bound_list=bound_list,
