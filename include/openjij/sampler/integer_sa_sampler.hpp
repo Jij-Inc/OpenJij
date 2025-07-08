@@ -79,6 +79,32 @@ BaseSA(const ModelType &model, const utility::TemperatureSchedule schedule,
   return result;
 }
 
+template <class ModelType, class UpdaterType>
+IntegerSAResult SolveByIntegerSAImpl(const ModelType &model,
+                                     const std::int64_t num_sweeps,
+                                     const algorithm::RandomNumberEngine rand_type,
+                                     const utility::TemperatureSchedule schedule,
+                                     const std::int64_t seed, const double min_T,
+                                     const double max_T, const bool log_history) {
+  switch (rand_type) {
+  case algorithm::RandomNumberEngine::XORSHIFT:
+    return BaseSA<ModelType, utility::Xorshift, UpdaterType>(
+        model, schedule, num_sweeps,
+        static_cast<utility::Xorshift::result_type>(seed), min_T, max_T,
+        log_history);
+  case algorithm::RandomNumberEngine::MT:
+    return BaseSA<ModelType, std::mt19937, UpdaterType>(
+        model, schedule, num_sweeps,
+        static_cast<std::mt19937::result_type>(seed), min_T, max_T,
+        log_history);
+  case algorithm::RandomNumberEngine::MT_64:
+    return BaseSA<ModelType, std::mt19937_64, UpdaterType>(
+        model, schedule, num_sweeps, seed, min_T, max_T, log_history);
+  default:
+    throw std::runtime_error("Unknown random number engine");
+  }
+}
+
 template <class ModelType>
 IntegerSAResult SolveByIntegerSA(const ModelType &model,
                                  const std::int64_t num_sweeps,
@@ -88,35 +114,19 @@ IntegerSAResult SolveByIntegerSA(const ModelType &model,
                                  const std::int64_t seed, const double min_T,
                                  const double max_T, const bool log_history) {
 
-  auto dispatch_engine = [&]<typename UpdaterType>() -> IntegerSAResult {
-    switch (rand_type) {
-    case algorithm::RandomNumberEngine::XORSHIFT:
-      return BaseSA<ModelType, utility::Xorshift, UpdaterType>(
-          model, schedule, num_sweeps,
-          static_cast<utility::Xorshift::result_type>(seed), min_T, max_T,
-          log_history);
-    case algorithm::RandomNumberEngine::MT:
-      return BaseSA<ModelType, std::mt19937, UpdaterType>(
-          model, schedule, num_sweeps,
-          static_cast<std::mt19937::result_type>(seed), min_T, max_T,
-          log_history);
-    case algorithm::RandomNumberEngine::MT_64:
-      return BaseSA<ModelType, std::mt19937_64, UpdaterType>(
-          model, schedule, num_sweeps, seed, min_T, max_T, log_history);
-    default:
-      throw std::runtime_error("Unknown random number engine");
-    }
-  };
-
   switch (update_method) {
   case algorithm::UpdateMethod::METROPOLIS:
-    return dispatch_engine.template operator()<updater::MetropolisUpdater>();
+    return SolveByIntegerSAImpl<ModelType, updater::MetropolisUpdater>(
+        model, num_sweeps, rand_type, schedule, seed, min_T, max_T, log_history);
   case algorithm::UpdateMethod::HEAT_BATH:
-    return dispatch_engine.template operator()<updater::HeatBathUpdater>();
+    return SolveByIntegerSAImpl<ModelType, updater::HeatBathUpdater>(
+        model, num_sweeps, rand_type, schedule, seed, min_T, max_T, log_history);
   case algorithm::UpdateMethod::SUWA_TODO:
-    return dispatch_engine.template operator()<updater::SuwaTodoUpdater>();
+    return SolveByIntegerSAImpl<ModelType, updater::SuwaTodoUpdater>(
+        model, num_sweeps, rand_type, schedule, seed, min_T, max_T, log_history);
   case algorithm::UpdateMethod::OPT_METROPOLIS:
-    return dispatch_engine.template operator()<updater::OptMetropolisUpdater>();
+    return SolveByIntegerSAImpl<ModelType, updater::OptMetropolisUpdater>(
+        model, num_sweeps, rand_type, schedule, seed, min_T, max_T, log_history);
   default:
     throw std::runtime_error("Unknown update method");
   }
