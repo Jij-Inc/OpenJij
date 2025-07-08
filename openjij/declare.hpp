@@ -1047,7 +1047,7 @@ void declare_UpdateMethod(py::module &m) {
    py::enum_<algorithm::UpdateMethod>(m, "UpdateMethod")
       .value("METROPOLIS", algorithm::UpdateMethod::METROPOLIS)
       .value("HEAT_BATH", algorithm::UpdateMethod::HEAT_BATH)
-      .value("SUWA_TODO", algorithm::UpdateMethod::HEAT_BATH)
+      .value("SUWA_TODO", algorithm::UpdateMethod::SUWA_TODO)
       .value("OPT_METROPOLIS", algorithm::UpdateMethod::OPT_METROPOLIS);
 }
 
