@@ -26,7 +26,7 @@ class HUIOTest(unittest.TestCase):
         for x, y, z in product(self.upd, self.ran, self.sch):
             r2 = oj.SASampler().sample_huio(Q, bound_list=bound_list, num_reads=30, 
                                              updater=x, random_number_engine=y, 
-                                             temperature_schedule=z)
+                                             temperature_schedule=z, seed=self.seed)
             self.assertAlmostEqual(r1.first.energy, r2.first.energy)
             self.assertEqual(r1.first.sample, r2.first.sample)
 
