@@ -95,7 +95,7 @@ jobs:
     - name: Install Eigen3 on macos
       if: ${{ matrix.os == 'macos-latest'}}
       run: |
-        brew install eigen nlohmann-json
+        brew install eigen nlohmann-json libomp
     - name: Add msbuild to PATH
       if: ${{ matrix.os == 'windows-latest'}}
       uses: microsoft/setup-msbuild@v2.0.0
