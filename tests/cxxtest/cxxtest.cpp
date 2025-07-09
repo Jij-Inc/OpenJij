@@ -40,6 +40,8 @@
 #include <openjij/utility/gpu/memory.hpp>
 #include <openjij/utility/gpu/cublas.hpp>
 #include <openjij/sampler/sa_sampler.hpp>
+#include <openjij/sampler/integer_sa_sampler.hpp>
+
 
 // include Eigen
 #include <Eigen/Dense>

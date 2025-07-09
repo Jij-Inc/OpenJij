@@ -22,3 +22,5 @@
 #include "openjij/graph/sparse.hpp"
 #include "openjij/graph/csr_sparse.hpp"
 #include "openjij/graph/square.hpp"
+#include "openjij/graph/integer_quadratic_model.hpp"
+#include "openjij/graph/integer_polynomial_model.hpp"

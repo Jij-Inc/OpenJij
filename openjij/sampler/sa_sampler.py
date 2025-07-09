@@ -12,14 +12,17 @@
 # limitations under the License
 from __future__ import annotations
 try:
-    from typing import Optional, Union
+    from typing import Optional, Union, Any
 except ImportError:
-    from typing_extensions import Optional, Union
+    from typing_extensions import Optional, Union, Any
 
 import cimod
 import dimod
+import math
+import time
 import numpy as np
 
+from collections import defaultdict
 from dimod import BINARY, SPIN
 
 import openjij
@@ -28,7 +31,13 @@ import openjij.cxxjij as cxxjij
 
 from openjij.sampler.sampler import BaseSampler
 from openjij.utils.graph_utils import qubo_to_ising
-from openjij.sampler.base_sa_sample_hubo import base_sample_hubo
+from openjij.sampler.base_sa_sample_hubo import base_sample_hubo, to_oj_response
+from openjij.utils.cxx_cast import (
+    cast_to_cxx_update_method,
+    cast_to_cxx_random_number_engine,
+    cast_to_cxx_temperature_schedule
+)
+
 
 """This module contains Simulated Annealing sampler."""
 
@@ -492,7 +501,7 @@ class SASampler(BaseSampler):
         seed: Optional[int] = None,
         temperature_schedule: str = "GEOMETRIC",
     ):  
-        """Sampling from higher order unconstrainted binary optimization.
+        """Sampling from higher order unconstrained binary optimization.
 
         Args:
             J (dict): Interactions.
@@ -517,7 +526,7 @@ class SASampler(BaseSampler):
                 >>> response = sampler.sample_hubo(J, "SPIN")
 
             for Binary case::
-                >>> sampler = ooenjij.SASampler()
+                >>> sampler = openjij.SASampler()
                 >>> J = {(0,): -1, (0, 1): -1, (0, 1, 2): 1}
                 >>> response = sampler.sample_hubo(J, "BINARY")
         """
@@ -557,7 +566,270 @@ class SASampler(BaseSampler):
                 seed=seed,
                 temperature_schedule=temperature_schedule
             )
+    
+    def _base_integer_sampler(
+        self,
+        J: dict[tuple, float],
+        bound_list: dict[Any, tuple[int, int]],
+        include_higher_order: bool,
+        num_sweeps: int = 1000,
+        num_reads: int = 1,
+        num_threads: int = 1,
+        beta_min: Optional[float] = None,
+        beta_max: Optional[float] = None,
+        updater: str = "OPT_METROPOLIS",
+        random_number_engine: str = "XORSHIFT",
+        seed: Optional[int] = None,
+        temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
+    ) -> "oj.sampler.response.Response":
 
+        start_solving = time.perf_counter()
+
+        if not isinstance(J, dict):
+            raise TypeError("J must be a dictionary of interactions.")
+        if len(J) == 0:
+            raise ValueError("J must not be an empty dictionary.")
+
+        # Summarize interactions
+        summarize_interactions = defaultdict(float)
+        index_set = set()
+        for key, value in J.items():
+            if not include_higher_order and len(key) > 2:
+                raise ValueError(
+                    "Only pairwise interactions are supported. Please use `sample_huio` for higher-order interactions with integer variables."
+                )
+            key_list = tuple(sorted(list(key), key=lambda x: (isinstance(x, str), x)))
+            summarize_interactions[key_list] += value
+            index_set.update(key)
+        
+        self.index_list = sorted(index_set, key=lambda x: (isinstance(x, str), x))
+        self.num_variables = len(self.index_list)
+
+        # Create a mapping from the original indices to integer indices
+        self.index_map = {index: i for i, index in enumerate(self.index_list)}
+
+        # Convert keys to integer indices
+        int_key_list = []
+        int_value_list = []
+        int_bound_list = []
+        for key, value in summarize_interactions.items():
+            int_key = [self.index_map[i] for i in key]
+            int_key_list.append(int_key)
+            int_value_list.append(value)
+
+        for i in range(self.num_variables):
+            index = self.index_list[i]
+            if index not in bound_list:
+                raise ValueError(f"Index {index} not found in bound_list.")
+            if bound_list[index][0] >= bound_list[index][1]:
+                raise ValueError(f"Index {index} has no variable range.")
+            int_bound_list.append(
+                (bound_list[index][0], bound_list[index][1])
+            )
+
+        if include_higher_order:
+            cxx_model = cxxjij.graph.IntegerPolynomialModel(
+                key_list=int_key_list,
+                value_list=int_value_list,
+                bound_list=int_bound_list,
+            )
+        else:
+            cxx_model = cxxjij.graph.IntegerQuadraticModel(
+                key_list=int_key_list,
+                value_list=int_value_list,
+                bound_list=int_bound_list,
+            )
+
+        if beta_min is None or beta_max is None:
+            max_coeff, min_coeff = cxx_model.get_max_min_coeffs()
+            if beta_min is None:
+                max_T = max_coeff / math.log(2)
+            if beta_max is None:
+                min_T = min_coeff / math.log(100)
+        if beta_min is not None:
+            max_T = 1.0/beta_min
+        if beta_max is not None:
+            min_T = 1.0/beta_max
+
+        if seed is None:
+            seed = np.random.randint(0, 2**32 - 1)
+
+        preprocess_time = time.perf_counter() - start_solving
+
+        # Start sampling
+        start_sample = time.perf_counter()
+        cxx_sampler = cxxjij.sampler.sample_by_integer_sa_polynomial if include_higher_order else cxxjij.sampler.sample_by_integer_sa_quadratic
+        cxx_result_list = cxx_sampler(
+            model=cxx_model,
+            num_sweeps=num_sweeps,
+            update_method=cast_to_cxx_update_method(updater),
+            rand_type=cast_to_cxx_random_number_engine(random_number_engine),
+            schedule=cast_to_cxx_temperature_schedule(temperature_schedule),
+            num_reads=num_reads,
+            seed=seed,
+            num_threads=num_threads,
+            min_T=min_T,
+            max_T=max_T,
+            log_history=log_history,
+        )
+        sample_time = time.perf_counter() - start_sample
+
+        # Make openjij response
+        start_make_oj_response = time.perf_counter()
+        oj_response = to_oj_response(
+            variables=[r.solution for r in cxx_result_list], 
+            index_list=self.index_list,
+            energies=[r.energy for r in cxx_result_list],
+            vartype=oj.Vartype.DISCRETE
+        )
+
+        oj_response.info["schedule"] = {
+            "num_sweeps": num_sweeps,
+            "num_reads": num_reads,
+            "num_threads": num_threads,
+            "beta_min": 1.0 / max_T,
+            "beta_max": 1.0 / min_T,
+            "update_method": updater,
+            "random_number_engine": random_number_engine,
+            "temperature_schedule": temperature_schedule,
+            "seed": seed,
+        }
+
+        oj_response.info["log"] = {
+            "energy_history": np.array([r.energy_history for r in cxx_result_list]),
+            "temperature_history": np.array([r.temperature_history for r in cxx_result_list]),
+        }
+
+        oj_response.info["time"] = {
+            "preprocess": preprocess_time,
+            "sample": sample_time,
+            "make_oj_response": time.perf_counter() - start_make_oj_response,
+            "total": time.perf_counter() - start_solving,
+        }
+
+        return oj_response
+    
+    def sample_quio(
+        self,
+        J: dict[tuple, float],
+        bound_list: dict[Any, tuple[int, int]],
+        num_sweeps: int = 1000,
+        num_reads: int = 1,
+        num_threads: int = 1,
+        beta_min: Optional[float] = None,
+        beta_max: Optional[float] = None,
+        updater: str = "OPT_METROPOLIS",
+        random_number_engine: str = "XORSHIFT",
+        seed: Optional[int] = None,
+        temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
+    ) -> "oj.sampler.response.Response":
+        """Sampling from quadratic unconstrained integer optimization (QUIO).
+        This method solves integer optimization problems with interactions up to quadratic order (linear and quadratic terms only).
+
+        Args:
+            J (dict): Interactions. Keys are tuples of variable indices, values are interaction coefficients.
+            bound_list (dict): Variable bounds. Keys are variable indices, values are tuples of (lower_bound, upper_bound) for integer variables.
+            num_sweeps (int, optional): The number of sweeps. Defaults to 1000.
+            num_reads (int, optional): The number of reads. Defaults to 1.
+            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to 1.
+            beta_min (float, optional): Minimum beta (initial inverse temperature). Defaults to None.
+            beta_max (float, optional): Maximum beta (final inverse temperature). Defaults to None.
+            updater (str, optional): Updater. One can choose "METROPOLIS", "OPT_METROPOLIS", "HEAT_BATH", and "SUWA_TODO". Defaults to "OPT_METROPOLIS".
+            random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
+            seed (int, optional): Seed for Monte Carlo algorithm. Defaults to None.
+            temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
+            log_history (bool, optional): If True, logs the energy and temperature history. Defaults to False.
+
+        Returns:
+            :class:`openjij.sampler.response.Response`: results
+
+        Examples::
+            To solve f(x) = -x_0 - x_0*x_1 + x_1*x_2 with bounds:
+            x_0 in [-10, 10], x_1 in [3, 10], use the following code:
+            >>> import openjij
+            >>> sampler = openjij.SASampler()
+            >>> J = {(0,): -1, (0, 1): -1, (1, 2): 1}
+            >>> bound_list = {0: (-10, 10), 1: (3, 10), 2: (-2, -1)}
+            >>> response = sampler.sample_quio(J, bound_list)
+        """
+        return self._base_integer_sampler(
+            J=J,
+            bound_list=bound_list,
+            include_higher_order=False,
+            num_sweeps=num_sweeps,
+            num_reads=num_reads,
+            num_threads=num_threads,
+            beta_min=beta_min,
+            beta_max=beta_max,
+            updater=updater,
+            random_number_engine=random_number_engine,
+            seed=seed,
+            temperature_schedule=temperature_schedule,
+            log_history=log_history
+        )
+        
+    
+    def sample_huio(
+        self,
+        J: dict[tuple, float],
+        bound_list: dict[Any, tuple[int, int]],
+        num_sweeps: int = 1000,
+        num_reads: int = 1,
+        num_threads: int = 1,
+        beta_min: Optional[float] = None,
+        beta_max: Optional[float] = None,
+        updater: str = "OPT_METROPOLIS",
+        random_number_engine: str = "XORSHIFT",
+        seed: Optional[int] = None,
+        temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
+    ) -> "oj.sampler.response.Response":
+        """Sampling from higher-order unconstrained integer optimization (HUIO).
+        This method solves integer optimization problems that can include variable interactions of any order (linear, quadratic, cubic, and higher).
+        
+        Args:
+            J (dict): Interactions. Keys are tuples of variable indices, values are interaction coefficients.
+            bound_list (dict): Variable bounds. Keys are variable indices, values are tuples of (lower_bound, upper_bound) for integer variables.
+            num_sweeps (int, optional): The number of sweeps. Defaults to 1000.
+            num_reads (int, optional): The number of reads. Defaults to 1.
+            num_threads (int, optional): The number of threads. Parallelized for each sampling with num_reads > 1. Defaults to 1.
+            beta_min (float, optional): Minimum beta (initial inverse temperature). Defaults to None.
+            beta_max (float, optional): Maximum beta (final inverse temperature). Defaults to None.
+            updater (str, optional): Updater. One can choose "METROPOLIS", "OPT_METROPOLIS", "HEAT_BATH", and "SUWA_TODO". Defaults to "OPT_METROPOLIS".
+            random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
+            seed (int, optional): Seed for Monte Carlo algorithm. Defaults to None.
+            temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
+            log_history (bool, optional): If True, logs the energy and temperature history. Defaults to False.
+
+        Returns:
+            :class:`openjij.sampler.response.Response`: results
+
+        Examples::
+            To solve f(x) = -x_0 - x_0*x_1 + x_0*x_1*x_2 with bounds:
+            x_0 in [-10, 10], x_1 in [3, 10], x_2 in [-2, -1], use the following code:
+            >>> import openjij
+            >>> sampler = openjij.SASampler()
+            >>> J = {(0,): -1, (0, 1): -1, (0, 1, 2): 1}
+            >>> bound_list = {0: (-10, 10), 1: (3, 10), 2: (-2, -1)}
+            >>> response = sampler.sample_huio(J, bound_list)
+        """
+        return self._base_integer_sampler(
+            J=J,
+            bound_list=bound_list,
+            include_higher_order=True,
+            num_sweeps=num_sweeps,
+            num_reads=num_reads,
+            num_threads=num_threads,
+            beta_min=beta_min,
+            beta_max=beta_max,
+            updater=updater,
+            random_number_engine=random_number_engine,
+            seed=seed,
+            temperature_schedule=temperature_schedule,
+            log_history=log_history
+        )
 
 def geometric_hubo_beta_schedule(sa_system, beta_max, beta_min, num_sweeps, seed=None):
     max_delta_energy = sa_system.get_max_effective_dE()

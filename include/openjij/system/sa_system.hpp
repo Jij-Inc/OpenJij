@@ -20,6 +20,9 @@ namespace system {
 template<class ModelType, typename RandType>
 class SASystem;
 
+template<class ModelType, typename RandType>
+class IntegerSASystem;
+
 
 } // namespace system
 } // namespace openjij

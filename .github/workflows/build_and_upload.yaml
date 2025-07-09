@@ -220,7 +220,7 @@ jobs:
         shell: bash 
         run: |
           set -eux 
-          brew install eigen nlohmann-json
+          brew install eigen nlohmann-json libomp
       - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
         uses: pypa/cibuildwheel@v2.22.0
         env:
