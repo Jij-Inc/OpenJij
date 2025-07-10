@@ -9,9 +9,11 @@ parts:
       - file: tutorial/000-intro_optimization_and_Ising
       - file: tutorial/001-openjij_introduction
       - file: tutorial/002-HuboSolver
-      - file: tutorial/003-jijmodeling_openjij_tsp
-      - file: tutorial/004-Evaluation
-      - file: tutorial/005-benchmark_sparse_dense
+      - file: tutorial/003-IntegerOptimization 
+      - file: tutorial/004-jijmodeling_openjij_tsp
+      - file: tutorial/005-Evaluation
+      - file: tutorial/006-benchmark_sparse_dense
+      - file: tutorial/007-Machine_Learning_by_QA
       - file: tutorial/optimization_index
         sections:
         - file: tutorial/optimization/number_partition
