@@ -38,8 +38,9 @@ struct OptMetropolisUpdater {
   template <typename SystemType>
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double progress) {
-    if (dist(sa_system.random_number_engine) < progress) {
-      // Metropolis Optimal Transition
+    // Metropolis Optimal Transition if possible
+    // This is used for systems with only quadratic coefficientsa
+    if (sa_system.UnderQuadraticCoeff(index) && dist(sa_system.random_number_engine) < progress) {
       const auto [min_val, min_dE] = sa_system.GetMinEnergyDifference(index);
       if (min_dE <= 0.0 ||
           dist(sa_system.random_number_engine) < std::exp(-min_dE / T)) {
