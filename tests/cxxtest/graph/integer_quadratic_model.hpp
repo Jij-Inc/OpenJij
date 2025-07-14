@@ -54,8 +54,8 @@ TEST(IntegerQuadraticModelTest, BasicFunctionality) {
   EXPECT_EQ(bounds_result[2].first, 0);
   EXPECT_EQ(bounds_result[2].second, 2);
 
-  const auto [max_coeff, min_coeff] = model.GetMaxMinCoeffs();
-  EXPECT_DOUBLE_EQ(max_coeff, 3.0);
+  const auto [max_coeff, min_coeff] = model.GetMaxMinTerms();
+  EXPECT_DOUBLE_EQ(max_coeff, 6.0);
   EXPECT_DOUBLE_EQ(min_coeff, 1.0);
 
   const auto &only_bilinear_index_set = model.GetOnlyBilinearIndexSet();

@@ -109,7 +109,7 @@ public:
     }
   }
 
-  std::pair<double, double> GetMaxMinCoeffs() const {
+  std::pair<double, double> GetMaxMinTerms() const {
     const double MIN_THRESHOLD = 1e-10;
 
     auto nonzero_abs_min = [&](double current_min, double value) -> double {
@@ -131,8 +131,31 @@ public:
 
     for (std::int64_t i = 0; i < this->key_value_list_.size(); ++i) {
       const double value = this->key_value_list_[i].second;
-      abs_min_dE = nonzero_abs_min(abs_min_dE, value);
-      abs_max_dE = nonzero_abs_max(abs_max_dE, value);
+      double min_term = std::abs(value);
+      double max_term = std::abs(value);
+      for (const auto &iter: this->key_value_list_[i].first) {
+        const std::int64_t index = iter.first;
+        const std::int64_t degree = iter.second;
+        const std::int64_t lower = this->bounds_[index].first;
+        const std::int64_t upper = this->bounds_[index].second;
+        if (lower <= 0 && 0 <= upper) {
+          max_term *= std::pow(std::max(std::abs(lower), std::abs(upper)), degree);
+        }
+        else {
+          if (lower > 0) {
+            min_term *= std::pow(lower, degree);
+            max_term *= std::pow(upper, degree);
+          } else if (upper < 0) {
+            min_term *= std::abs(std::pow(upper, degree));
+            max_term *= std::abs(std::pow(lower, degree));
+          } else {
+            throw std::runtime_error("Bounds are not valid.");
+          }
+        }
+      }
+      
+      abs_min_dE = nonzero_abs_min(abs_min_dE, min_term);
+      abs_max_dE = nonzero_abs_max(abs_max_dE, max_term);
     }
 
     if (std::isinf(abs_min_dE) || abs_max_dE == 0.0) {

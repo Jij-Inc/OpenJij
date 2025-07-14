@@ -11,7 +11,7 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
   std::vector<double> value_list = {1.0, -1.0, 3.0, -1.5, 0.5, 2.5, 0.5};
 
   std::vector<std::pair<std::int64_t, std::int64_t>> bounds = {
-      {0, 1}, {0, 1}, {0, 2}, {-1, 3}, {-2, 2}, {4, 7}, {6, 7}};
+      {0, 1}, {0, 1}, {0, 2}, {-1, 3}, {-2, 2}};
 
   graph::IntegerPolynomialModel model(key_list, value_list, bounds);
 
@@ -26,7 +26,7 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
   EXPECT_EQ(model.GetNumVariables(), 5);
 
   const auto &bounds_result = model.GetBounds();
-  EXPECT_EQ(bounds_result.size(), 7);
+  EXPECT_EQ(bounds_result.size(), 5);
   EXPECT_EQ(bounds_result[0].first, 0);
   EXPECT_EQ(bounds_result[0].second, 1);
   EXPECT_EQ(bounds_result[1].first, 0);
@@ -37,10 +37,6 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
   EXPECT_EQ(bounds_result[3].second, 3);
   EXPECT_EQ(bounds_result[4].first, -2);
   EXPECT_EQ(bounds_result[4].second, 2);
-  EXPECT_EQ(bounds_result[5].first, 4);
-  EXPECT_EQ(bounds_result[5].second, 7);
-  EXPECT_EQ(bounds_result[6].first, 6);
-  EXPECT_EQ(bounds_result[6].second, 7);
 
   EXPECT_DOUBLE_EQ(model.GetConstant(), 0.5);
 
@@ -134,8 +130,8 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
   EXPECT_EQ(under_quadratic_set.count(4), 1);
   EXPECT_EQ(under_quadratic_set.count(0), 0);
 
-  const auto [max_coeff, min_coeff] = model.GetMaxMinCoeffs();
-  EXPECT_DOUBLE_EQ(max_coeff, 3.0);
+  const auto [max_coeff, min_coeff] = model.GetMaxMinTerms();
+  EXPECT_DOUBLE_EQ(max_coeff, 18.0);
   EXPECT_DOUBLE_EQ(min_coeff, 0.5);
 }
 
