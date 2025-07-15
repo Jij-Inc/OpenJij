@@ -183,3 +183,7 @@ project_template/tutorial
 
 docs/ja/_build
 docs/en/_build
+
+# Claude Code integration
+.claude/
+CLAUDE.md
