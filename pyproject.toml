@@ -144,6 +144,6 @@ archs = ["AMD64"]
 #"vcpkg --triplet x64-windows-static install openblas[threads] --recurse", 
 #"vcpkg --triplet x64-windows-static install clapack --recurse", 
 before-build = [ 
-    "pip install --upgrade pip wheel build cmake 'pybind11<3' delvewheel", 
+    "pip install --upgrade pip wheel build cmake "pybind11<3" delvewheel", 
 ]
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
