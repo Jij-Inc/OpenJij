@@ -188,7 +188,7 @@ jobs:
                dnf -y --enablerepo=powertools install eigen3-devel
           CIBW_BEFORE_BUILD_LINUX: >
                source scl_source enable gcc-toolset-11 &&
-               pip install pybind11 cmake ninja
+               pip install 'pybind11<3' cmake ninja
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
       - uses: actions/upload-artifact@v4
         with:
@@ -197,48 +197,67 @@ jobs:
           retention-days: 30   
           compression-level: 0
           
-  build_wheels_macos:
-    name: Build wheels macos ${{ matrix.arch }} 
-    runs-on: ${{ matrix.os }}
+  build_wheels_macos_x86_64:
+    name: Build wheels macos x86_64
+    runs-on: macos-13
     strategy:
-      fail-fast: false 
-      matrix:  
+      fail-fast: false
+      matrix:
         include:
-          - artifact: wheel-macosx-13
-            os: macos-latest
-            arch: universal2
-            CIBW_PLATFORM: macos  
-            CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='13.0'"
-          - artifact: wheel-macos-10
-            os: macos-latest
-            arch: universal2
-            CIBW_PLATFORM: macos
-            CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='10.14'"
+          - artifact: wheel-macosx-x86_64
+            MACOSX_DEPLOYMENT_TARGET: "10.14"
     steps:
       - uses: actions/checkout@v4
-      - name: Install Dependency 
-        shell: bash 
+      - name: Install Dependency
+        shell: bash
         run: |
-          set -eux 
+          set -eux
           brew install eigen nlohmann-json libomp
-          arch -x86_64 brew install libomp
-      - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
+      - name: Build wheels on macos x86_64
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_SKIP: "cp313-*"
-          CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
-          CIBW_ARCHS: ${{matrix.arch}}
+          CIBW_PLATFORM: macos
+          CIBW_ARCHS: x86_64
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
           CIBW_ENVIRONMENT: >
-            ${{ matrix.CIBW_ENVIRONMENT }}
-            ARCHFLAGS="-arch arm64 -arch x86_64"
-            LDFLAGS="-L/opt/homebrew/opt/libomp/lib -L/usr/local/opt/libomp/lib -lomp"
-            CXXFLAGS="-I/opt/homebrew/opt/libomp/include -I/usr/local/opt/libomp/include -Xpreprocessor -fopenmp"
+            MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
-          retention-days: 30 
+          retention-days: 30
+          compression-level: 0
+
+  build_wheels_macos_arm64:
+    name: Build wheels macos arm64
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: wheel-macosx-arm64
+            MACOSX_DEPLOYMENT_TARGET: "13.0"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dependency
+        shell: bash
+        run: |
+          set -eux
+          brew install eigen nlohmann-json libomp
+      - name: Build wheels on macos arm64
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_SKIP: "cp313-*"
+          CIBW_PLATFORM: macos
+          CIBW_ARCHS: arm64
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
+          CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{matrix.artifact}}
+          path: ./wheelhouse/*.whl
+          retention-days: 30
           compression-level: 0
           
   build_wheels_windows:
@@ -302,7 +321,7 @@ jobs:
           compression-level: 0
           
   upload_pypi:
-    needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos, build_wheels_windows, build_sdist]
+    needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos_x86_64, build_wheels_macos_arm64, build_wheels_windows, build_sdist]
     runs-on: ubuntu-latest
     permissions:
         id-token: write
