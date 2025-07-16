@@ -347,9 +347,7 @@ def quartic_ising_schedule(model, beta_min, beta_max, gamma, num_sweeps):
     """
     beta_geo = np.geomspace(beta_min, beta_max, num_sweeps).tolist()
     s = np.linspace(0, 1, num_sweeps)
-    # fs = s**4 * (35 - 84 * s + 70 * s**2 - 20 * s**3)
-    n = 10
-    fs = 1/2 + (2*s - 1) / (2 * np.sqrt(n - (n-1)*((2*s-1)**2)))
+    fs = s**4 * (35 - 84 * s + 70 * s**2 - 20 * s**3)
     schedule = [((elem, beta_geo[i]), 1) for i, elem in enumerate(fs)]
     return schedule, [beta_max, gamma]
 

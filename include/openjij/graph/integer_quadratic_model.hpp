@@ -79,7 +79,7 @@ public:
     }
   }
 
-  std::pair<double, double> GetMaxMinCoeffs() const {
+  std::pair<double, double> GetMaxMinTerms() const {
     const double MIN_THRESHOLD = 1e-10;
 
     auto nonzero_abs_min = [&](double current_min, double value) -> double {
@@ -100,15 +100,41 @@ public:
     double abs_max_dE = 0.0;
 
     for (std::int64_t i = 0; i < this->num_variables_; ++i) {
-      for (const auto &[j, q] : this->quadratic_[i]) {
-        abs_min_dE = nonzero_abs_min(abs_min_dE, q);
-        abs_max_dE = nonzero_abs_max(abs_max_dE, q);
-      }
-      abs_min_dE = nonzero_abs_min(abs_min_dE, this->linear_[i]);
-      abs_max_dE = nonzero_abs_max(abs_max_dE, this->linear_[i]);
-      abs_min_dE = nonzero_abs_min(abs_min_dE, this->squared_[i]);
-      abs_max_dE = nonzero_abs_max(abs_max_dE, this->squared_[i]);
-    }
+       const auto &bound_i = this->bounds_[i];
+       const double max_abs_i = static_cast<double>(std::max(std::abs(bound_i.first), std::abs(bound_i.second)));
+       
+       double min_nonzero_abs_i;
+       if (bound_i.first > 0) {
+         min_nonzero_abs_i = static_cast<double>(bound_i.first);
+       } else if (bound_i.second < 0) {
+         min_nonzero_abs_i = static_cast<double>(std::abs(bound_i.second));
+       } else {
+         min_nonzero_abs_i = 1.0;
+       }
+
+       for (const auto &[j, q] : this->quadratic_[i]) {
+         const auto &bound_j = this->bounds_[j];
+         const double max_abs_j = static_cast<double>(std::max(std::abs(bound_j.first), std::abs(bound_j.second)));
+         
+         double min_nonzero_abs_j;
+         if (bound_j.first > 0) {
+           min_nonzero_abs_j = static_cast<double>(bound_j.first);
+         } else if (bound_j.second < 0) {
+           min_nonzero_abs_j = static_cast<double>(std::abs(bound_j.second));
+         } else {
+           min_nonzero_abs_j = 1.0;
+         }
+             
+         abs_min_dE = nonzero_abs_min(abs_min_dE, std::abs(q) * min_nonzero_abs_i * min_nonzero_abs_j);
+         abs_max_dE = nonzero_abs_max(abs_max_dE, std::abs(q) * max_abs_i * max_abs_j);
+       }
+
+       abs_min_dE = nonzero_abs_min(abs_min_dE, std::abs(this->linear_[i]) * min_nonzero_abs_i);
+       abs_max_dE = nonzero_abs_max(abs_max_dE, std::abs(this->linear_[i]) * max_abs_i);
+
+       abs_min_dE = nonzero_abs_min(abs_min_dE, std::abs(this->squared_[i]) * std::pow(min_nonzero_abs_i, 2));
+       abs_max_dE = nonzero_abs_max(abs_max_dE, std::abs(this->squared_[i]) * std::pow(max_abs_i, 2));
+     }
 
     if (std::isinf(abs_min_dE) || abs_max_dE == 0.0) {
       throw std::runtime_error("No valid energy difference found.");
