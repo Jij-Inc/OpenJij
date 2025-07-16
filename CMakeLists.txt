@@ -88,6 +88,17 @@ message(STATUS "Started CMake for ${PROJECT_NAME} \n")
 if (APPLE)
     #set(CMAKE_MACOSX_RPATH TRUE)
     message(STATUS "CMAKE_OSX_DEPLOYMENT_TARGET = ${CMAKE_OSX_DEPLOYMENT_TARGET}")
+    
+    # Handle universal2 builds for cibuildwheel
+    if($ENV{CIBUILDWHEEL} AND "$ENV{CIBW_ARCHS}" STREQUAL "universal2")
+        message(STATUS "Detected universal2 build, setting CMAKE_OSX_ARCHITECTURES")
+        if(NOT CMAKE_OSX_ARCHITECTURES)
+            set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build for arm64 and x86_64" FORCE)
+        endif()
+    endif()
+    
+    message(STATUS "CMAKE_OSX_ARCHITECTURES = ${CMAKE_OSX_ARCHITECTURES}")
+    
     add_compile_options(-Wno-unused-command-line-argument)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -lomp -Wno-unused-command-line-argument")
     include_directories(SYSTEM /opt/homebrew/opt/libomp/include)

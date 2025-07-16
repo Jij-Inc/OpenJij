@@ -33,42 +33,58 @@ if any(arg in sys.argv for arg in ("pytest", "test")):
 
 os.environ["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
+cmake_args = []
+
 if platform.system() == "Darwin":
-    cmake_args = ["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"]
+    cmake_args.append("-DCMAKE_POLICY_VERSION_MINIMUM=3.5")
     
     # Handle macOS universal2 builds
     cibw_archs = os.environ.get("CIBW_ARCHS", "")
     archflags = os.environ.get("ARCHFLAGS", "")
+    cibuildwheel = os.environ.get("CIBUILDWHEEL", "")
     
-    if cibw_archs == "universal2" or "universal2" in cibw_archs:
-        # Universal2 build: both x86_64 and arm64
-        cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64")
-    elif archflags:
-        # Parse ARCHFLAGS to determine architectures
-        archs = []
-        if "-arch x86_64" in archflags:
-            archs.append("x86_64")
-        if "-arch arm64" in archflags:
-            archs.append("arm64")
-        if archs:
-            cmake_args.append(f"-DCMAKE_OSX_ARCHITECTURES={';'.join(archs)}")
-    
-    # Set CMAKE_ARGS environment variable
+    # Check if we're in a cibuildwheel build
+    if cibuildwheel == "1":
+        if cibw_archs == "universal2" or "universal2" in cibw_archs:
+            # Universal2 build: both x86_64 and arm64
+            cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64")
+            print("Setting CMAKE_OSX_ARCHITECTURES=arm64;x86_64 for universal2 build")
+        elif archflags:
+            # Parse ARCHFLAGS to determine architectures
+            archs = []
+            if "-arch x86_64" in archflags:
+                archs.append("x86_64")
+            if "-arch arm64" in archflags:
+                archs.append("arm64")
+            if archs:
+                cmake_args.append(f"-DCMAKE_OSX_ARCHITECTURES={';'.join(archs)}")
+                print(f"Setting CMAKE_OSX_ARCHITECTURES={';'.join(archs)} from ARCHFLAGS")
+
+# Set CMAKE_ARGS environment variable
+if cmake_args:
     existing_cmake_args = os.environ.get("CMAKE_ARGS", "")
     if existing_cmake_args:
         os.environ["CMAKE_ARGS"] = f"{existing_cmake_args} {' '.join(cmake_args)}"
     else:
         os.environ["CMAKE_ARGS"] = " ".join(cmake_args)
+    print(f"CMAKE_ARGS set to: {os.environ['CMAKE_ARGS']}")
 
-setup(
-    setup_requires=setup_requires,
-    packages=[
+# Pass cmake_args to setup if we're using skbuild
+setup_kwargs = {
+    "setup_requires": setup_requires,
+    "packages": [
         "openjij",
         "openjij.model",
         "openjij.sampler",
         "openjij.utils",
     ],
-    cmake_install_dir="openjij",
-    include_package_data=False,
-    zip_safe=False,
-)
+    "cmake_install_dir": "openjij",
+    "include_package_data": False,
+    "zip_safe": False,
+}
+
+# If using skbuild and we have cmake_args, pass them
+if 'skbuild' in sys.modules and cmake_args:
+    setup_kwargs["cmake_args"] = cmake_args
+
+setup(**setup_kwargs)
