@@ -216,7 +216,7 @@ jobs:
       - name: Build wheels on macos x86_64
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_SKIP: "cp313-*"
+          CIBW_SKIP: "cp313-* pp*"
           CIBW_PLATFORM: macos
           CIBW_ARCHS: x86_64
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
@@ -248,7 +248,7 @@ jobs:
       - name: Build wheels on macos arm64
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_SKIP: "cp313-*"
+          CIBW_SKIP: "cp313-* pp*"
           CIBW_PLATFORM: macos
           CIBW_ARCHS: arm64
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
