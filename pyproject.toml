@@ -124,7 +124,7 @@ build-frontend = "build"
 #before-all = [ 
 #    "brew install eigen nlohmann-json",
 #]
-environment = { ARCHFLAGS = "-arch x86_64 -arch arm64", MACOSX_DEPLOYMENT_TARGET = "13.0" }
+environment = { ARCHFLAGS = "-arch x86_64 -arch arm64", MACOSX_DEPLOYMENT_TARGET = "13.0", USE_OMP = "OFF" }
 before-build = [ 
     "pip install --upgrade pip wheel build pybind11 cmake ninja", 
 ]

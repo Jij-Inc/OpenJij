@@ -33,11 +33,11 @@ jobs:
       - name: Build wheels with cibuildwheel
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_BUILD: "cp${{ matrix.python-version }}-*"
+          CIBW_BUILD: "cp39-*"
           CIBW_SKIP: "cp313-*"
           CIBW_PLATFORM: macos
           CIBW_ARCHS_MACOS: universal2
-          CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='13.0' ARCHFLAGS='-arch x86_64 -arch arm64' CIBUILDWHEEL=1"
+          CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='13.0' ARCHFLAGS='-arch x86_64 -arch arm64' CIBUILDWHEEL=1 USE_OMP=OFF"
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
           CIBW_BUILD_VERBOSITY: 3
       - name: Show built wheels
