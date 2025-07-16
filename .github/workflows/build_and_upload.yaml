@@ -10,8 +10,8 @@ concurrency:
       cancel-in-progress: false
 
 jobs:
-  build_sdist:
-    runs-on: ubuntu-latest
+  # build_sdist:
+  #   runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -31,8 +31,8 @@ jobs:
           retention-days: 30
           compression-level: 0
           
-  build_wheels_linux_x86_64:
-    name: Build wheels linux x86_64
+  # build_wheels_linux_x86_64:
+  #   name: Build wheels linux x86_64
     runs-on: ubuntu-latest
     container: ${{matrix.container}}
     strategy:
@@ -133,8 +133,8 @@ jobs:
           retention-days: 30 
           compression-level: 0
   
-  build_wheels_linux_aarch64:
-    name: Build wheels linux aarch64 ${{matrix.CIBW_BUILD}}
+  # build_wheels_linux_aarch64:
+  #   name: Build wheels linux aarch64 ${{matrix.CIBW_BUILD}}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false 
@@ -239,8 +239,8 @@ jobs:
           retention-days: 30 
           compression-level: 0
           
-  build_wheels_windows:
-    name: Build wheels windows ${{ matrix.arch }} 
+  # build_wheels_windows:
+  #   name: Build wheels windows ${{ matrix.arch }} 
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false 
@@ -299,8 +299,8 @@ jobs:
           retention-days: 30       
           compression-level: 0
           
-  upload_pypi:
-    needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos, build_wheels_windows, build_sdist]
+  # upload_pypi:
+  #   needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos, build_wheels_windows, build_sdist]
     runs-on: ubuntu-latest
     permissions:
         id-token: write

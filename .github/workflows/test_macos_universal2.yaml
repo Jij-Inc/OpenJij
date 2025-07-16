@@ -1,0 +1,54 @@
+name: Test macOS Universal2 Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/fix_sqa]
+
+jobs:
+  build_wheels_macos:
+    name: Build wheels macOS universal2 
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false 
+      matrix:  
+        python-version: ['3.9']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies 
+        shell: bash 
+        run: |
+          set -eux 
+          # Install dependencies
+          brew install eigen nlohmann-json
+          # Install universal libomp if available
+          brew install libomp || echo "libomp may not be universal"
+          # Check libomp architectures
+          echo "Checking libomp architectures:"
+          lipo -info /opt/homebrew/opt/libomp/lib/libomp.dylib || lipo -info /usr/local/opt/libomp/lib/libomp.dylib || echo "libomp not found"
+      - name: Build wheels with cibuildwheel
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_BUILD: "cp${{ matrix.python-version }}-*"
+          CIBW_SKIP: "cp313-*"
+          CIBW_PLATFORM: macos
+          CIBW_ARCHS_MACOS: universal2
+          CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='13.0' ARCHFLAGS='-arch x86_64 -arch arm64' CIBUILDWHEEL=1"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
+          CIBW_BUILD_VERBOSITY: 3
+      - name: Show built wheels
+        run: |
+          ls -la ./wheelhouse/
+          for wheel in ./wheelhouse/*.whl; do
+            echo "Checking wheel: $wheel"
+            unzip -l "$wheel" | grep ".so"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-macos-universal2-py${{ matrix.python-version }}
+          path: ./wheelhouse/*.whl
+          retention-days: 7

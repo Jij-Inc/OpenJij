@@ -40,12 +40,22 @@ if platform.system() == "Darwin":
     
     # Handle macOS universal2 builds
     cibw_archs = os.environ.get("CIBW_ARCHS", "")
+    cibw_archs_macos = os.environ.get("CIBW_ARCHS_MACOS", "")
     archflags = os.environ.get("ARCHFLAGS", "")
     cibuildwheel = os.environ.get("CIBUILDWHEEL", "")
+    _arch = os.environ.get("_PYTHON_HOST_PLATFORM", "")
+    
+    # Debug print
+    print(f"CIBW_ARCHS: {cibw_archs}")
+    print(f"CIBW_ARCHS_MACOS: {cibw_archs_macos}")
+    print(f"ARCHFLAGS: {archflags}")
+    print(f"CIBUILDWHEEL: {cibuildwheel}")
+    print(f"_PYTHON_HOST_PLATFORM: {_arch}")
     
     # Check if we're in a cibuildwheel build
     if cibuildwheel == "1":
-        if cibw_archs == "universal2" or "universal2" in cibw_archs:
+        # Check both CIBW_ARCHS and CIBW_ARCHS_MACOS
+        if "universal2" in cibw_archs or "universal2" in cibw_archs_macos or "universal2" in _arch:
             # Universal2 build: both x86_64 and arm64
             cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64")
             print("Setting CMAKE_OSX_ARCHITECTURES=arm64;x86_64 for universal2 build")
@@ -59,6 +69,11 @@ if platform.system() == "Darwin":
             if archs:
                 cmake_args.append(f"-DCMAKE_OSX_ARCHITECTURES={';'.join(archs)}")
                 print(f"Setting CMAKE_OSX_ARCHITECTURES={';'.join(archs)} from ARCHFLAGS")
+        else:
+            # Fallback: if ARCHFLAGS is set, we should be building universal2
+            if archflags == "-arch x86_64 -arch arm64":
+                cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64")
+                print("Setting CMAKE_OSX_ARCHITECTURES=arm64;x86_64 from ARCHFLAGS (fallback)")
 
 # Set CMAKE_ARGS environment variable
 if cmake_args:
