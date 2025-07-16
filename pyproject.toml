@@ -119,12 +119,12 @@ before-build = [
 repair-wheel-command = "auditwheel repair --lib-sdir . -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
+archs = ["x86_64", "arm64", "universal2"]
 build-frontend = "build"
 #before-all = [ 
 #    "brew install eigen nlohmann-json",
 #]
-#environment = "CFLAGS='-O3 -pipe' CXXFLAGS='-O3 -pipe'" 
+environment = { ARCHFLAGS = "-arch x86_64 -arch arm64" }
 before-build = [ 
     "pip install --upgrade pip wheel build pybind11 cmake ninja", 
 ]

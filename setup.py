@@ -34,7 +34,31 @@ if any(arg in sys.argv for arg in ("pytest", "test")):
 os.environ["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
 if platform.system() == "Darwin":
-    os.environ["CMAKE_ARGS"] = "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+    cmake_args = ["-DCMAKE_POLICY_VERSION_MINIMUM=3.5"]
+    
+    # Handle macOS universal2 builds
+    cibw_archs = os.environ.get("CIBW_ARCHS", "")
+    archflags = os.environ.get("ARCHFLAGS", "")
+    
+    if cibw_archs == "universal2" or "universal2" in cibw_archs:
+        # Universal2 build: both x86_64 and arm64
+        cmake_args.append("-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64")
+    elif archflags:
+        # Parse ARCHFLAGS to determine architectures
+        archs = []
+        if "-arch x86_64" in archflags:
+            archs.append("x86_64")
+        if "-arch arm64" in archflags:
+            archs.append("arm64")
+        if archs:
+            cmake_args.append(f"-DCMAKE_OSX_ARCHITECTURES={';'.join(archs)}")
+    
+    # Set CMAKE_ARGS environment variable
+    existing_cmake_args = os.environ.get("CMAKE_ARGS", "")
+    if existing_cmake_args:
+        os.environ["CMAKE_ARGS"] = f"{existing_cmake_args} {' '.join(cmake_args)}"
+    else:
+        os.environ["CMAKE_ARGS"] = " ".join(cmake_args)
 
 setup(
     setup_requires=setup_requires,

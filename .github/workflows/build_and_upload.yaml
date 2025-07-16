@@ -208,12 +208,12 @@ jobs:
             os: macos-latest
             arch: universal2
             CIBW_PLATFORM: macos  
-            CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='13.0'"
+            CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='13.0' ARCHFLAGS='-arch x86_64 -arch arm64' CMAKE_ARGS='-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'"
           - artifact: wheel-macos-10
             os: macos-latest
             arch: universal2
             CIBW_PLATFORM: macos
-            CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='10.14'"
+            CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET='10.14' ARCHFLAGS='-arch x86_64 -arch arm64' CMAKE_ARGS='-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64'"
     steps:
       - uses: actions/checkout@v4
       - name: Install Dependency 
