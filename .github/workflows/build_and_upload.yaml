@@ -321,7 +321,7 @@ jobs:
           compression-level: 0
           
   upload_pypi:
-    needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos, build_wheels_windows, build_sdist]
+    needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos_x86_64, build_wheels_macos_arm64, build_wheels_windows, build_sdist]
     runs-on: ubuntu-latest
     permissions:
         id-token: write
