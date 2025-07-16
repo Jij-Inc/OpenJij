@@ -221,14 +221,19 @@ jobs:
         run: |
           set -eux 
           brew install eigen nlohmann-json libomp
+          arch -x86_64 brew install libomp
       - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_SKIP: "cp313-*"
-          CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8,<3.13"
+          CIBW_ENVIRONMENT: >
+            ${{ matrix.CIBW_ENVIRONMENT }}
+            ARCHFLAGS="-arch arm64 -arch x86_64"
+            LDFLAGS="-L/opt/homebrew/opt/libomp/lib -L/usr/local/opt/libomp/lib -lomp"
+            CXXFLAGS="-I/opt/homebrew/opt/libomp/include -I/usr/local/opt/libomp/include -Xpreprocessor -fopenmp"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
