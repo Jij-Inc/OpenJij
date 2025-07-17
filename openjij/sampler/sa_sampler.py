@@ -642,7 +642,7 @@ class SASampler(BaseSampler):
             )
 
         if beta_min is None or beta_max is None:
-            max_coeff, min_coeff = cxx_model.get_max_min_coeffs()
+            max_coeff, min_coeff = cxx_model.get_max_min_terms()
             if beta_min is None:
                 max_T = max_coeff / math.log(2)
             if beta_max is None:

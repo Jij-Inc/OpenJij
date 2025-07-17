@@ -100,11 +100,11 @@ $ git clone git@github.com:OpenJij/OpenJij.git
 $ cd OpenJij
 $ python -m venv .venv
 $ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-$ pip install -r requirements.txt
-
+$ pip-compile setup.cfg
+$ pip-compile dev-requirements.in
+$ pip-sync requirements.txt dev-requirements.txt
 # Build C++ extension only (faster than full install)
 $ python setup.py build_ext --inplace
-
 # Install Python code in editable mode
 $ pip install -e . --no-build-isolation
 ```

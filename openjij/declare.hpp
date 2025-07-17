@@ -943,7 +943,7 @@ void declare_IntegerQuadraticModel(py::module &m) {
                          std::vector<std::pair<std::int64_t, std::int64_t>>&>(),
                          "key_list"_a, "value_list"_a, "bound_list"_a);
   
-   py_class.def("get_max_min_coeffs", &IQM::GetMaxMinCoeffs);
+   py_class.def("get_max_min_terms", &IQM::GetMaxMinTerms);
    py_class.def("get_index_list", &IQM::GetIndexList);
    py_class.def("get_num_variables", &IQM::GetNumVariables);
    py_class.def("get_quadratic", &IQM::GetQuadratic);
@@ -965,7 +965,7 @@ void declare_IntegerPolynomialModel(py::module &m) {
                          std::vector<std::pair<std::int64_t, std::int64_t>>&>(),
                          "key_list"_a, "value_list"_a, "bound_list"_a);
   
-   py_class.def("get_max_min_coeffs", &IPM::GetMaxMinCoeffs);
+   py_class.def("get_max_min_terms", &IPM::GetMaxMinTerms);
    py_class.def("get_index_list", &IPM::GetIndexList);
    py_class.def("get_num_variables", &IPM::GetNumVariables);
    py_class.def("get_bound_list", &IPM::GetBounds);

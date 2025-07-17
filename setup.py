@@ -23,7 +23,7 @@ except ImportError:
 
 setup_requires = [
     "numpy",
-    "pybind11",
+    "pybind11 < 3",
     "cmake > 3.20",
     "scikit-build > 0.16.0"
 ]
