@@ -11,10 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 from __future__ import annotations
-try:
-    from typing import Optional, Union, Any
-except ImportError:
-    from typing_extensions import Optional, Union, Any
+from typing import Optional, Union, Any
 
 import cimod
 import dimod
