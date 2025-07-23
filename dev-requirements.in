@@ -30,3 +30,4 @@ pytest-runner
 pytest-randomly
 pytest-spec
 coverage
+scipy  # Required for test_cxx.py CSRSparse tests
