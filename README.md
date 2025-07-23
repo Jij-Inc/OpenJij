@@ -137,15 +137,7 @@ If you encounter issues:
 
 ## For Contributor
 
-Use `pre-commit` for auto chech before git commit.
-`.pre-commit-config.yaml`
-
-```
-# pipx install pre-commit 
-# or 
-# pip install pre-commit
-pre-commit install
-```
+Please follow the existing code style and run tests before submitting a pull request.
 
 ## Test
 

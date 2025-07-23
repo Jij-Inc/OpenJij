@@ -14,8 +14,6 @@
 
 -c requirements.txt
 
-pre-commit
-
 pytest-runner
 setuptools_scm[toml]
 cmake 
