@@ -11,7 +11,6 @@ import openjij.cxxjij.utility as U
 import openjij.cxxjij.result as R
 from scipy import sparse
 
-
 class CXXTest(unittest.TestCase):
 
     def setUp(self):

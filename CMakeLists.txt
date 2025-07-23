@@ -91,8 +91,13 @@ if (APPLE)
     add_compile_options(-Wno-unused-command-line-argument)
     find_program(BREW_EXECUTABLE brew)
     if(BREW_EXECUTABLE)
-      execute_process(COMMAND brew --prefix libomp COMMAND tr -d '\n' OUTPUT_VARIABLE OMP_DIR)
-      if(OMP_DIR)
+      execute_process(
+          COMMAND ${BREW_EXECUTABLE} list libomp
+          RESULT_VARIABLE IS_LIBOMP_INSTALLED
+          OUTPUT_QUIET ERROR_QUIET
+      )
+      if(IS_LIBOMP_INSTALLED EQUAL 0)
+          execute_process(COMMAND brew --prefix libomp COMMAND tr -d '\n' OUTPUT_VARIABLE OMP_DIR)
           message(STATUS "Found libomp at: ${OMP_DIR}")
           set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xpreprocessor -fopenmp -lomp -Wno-unused-command-line-argument")
           include_directories(SYSTEM ${OMP_DIR}/include)
