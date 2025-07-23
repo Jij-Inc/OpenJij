@@ -28,8 +28,6 @@ setup_requires = [
     "scikit-build > 0.16.0"
 ]
 
-if any(arg in sys.argv for arg in ("pytest", "test")):
-    setup_requires.append("pytest-runner")
 
 os.environ["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 

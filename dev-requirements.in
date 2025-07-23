@@ -14,7 +14,6 @@
 
 -c requirements.txt
 
-pytest-runner
 setuptools_scm[toml]
 cmake 
 ninja; sys_platform != 'win32'
@@ -24,7 +23,6 @@ scikit-build
 pytest
 pytest-mock
 pytest-cov
-pytest-runner
 pytest-randomly
 pytest-spec
 coverage
