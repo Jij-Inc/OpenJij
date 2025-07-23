@@ -9,6 +9,7 @@ import openjij.cxxjij.system as S
 import openjij.cxxjij.algorithm as A
 import openjij.cxxjij.utility as U
 import openjij.cxxjij.result as R
+from scipy import sparse
 
 class CXXTest(unittest.TestCase):
 
@@ -257,7 +258,7 @@ class CXXTest(unittest.TestCase):
     def test_SingleSpinFlip_ClassicalIsing_CSRSparse(self):
 
         #classial ising (csr sparse)
-        csr_sparse = G.CSRSparse(np.triu(self.dense.get_interactions()))
+        csr_sparse = G.CSRSparse(sparse.csr_matrix(np.triu(self.dense.get_interactions())))
 
         system = S.make_classical_ising(self.sparse.gen_spin(self.seed_for_spin), csr_sparse)
 
@@ -451,7 +452,7 @@ class CXXTest(unittest.TestCase):
 
     def test_SingleSpinFlip_TransverseIsing_CSRSparse(self):
         #classial ising (csr sparse)
-        csr_sparse = G.CSRSparse(np.triu(self.dense.get_interactions()))
+        csr_sparse = G.CSRSparse(sparse.csr_matrix(np.triu(self.dense.get_interactions())))
 
         system = S.make_transverse_ising(self.sparse.gen_spin(self.seed_for_spin), csr_sparse, 1.0, 10)
 
@@ -486,7 +487,7 @@ class CXXTest(unittest.TestCase):
 
     def test_SwendsenWang_ClassicalIsing_CSRSparse(self):
         #classial ising (csr sparse)
-        csr_sparse = G.CSRSparse(np.triu(self.dense.get_interactions()))
+        csr_sparse = G.CSRSparse(sparse.csr_matrix(np.triu(self.dense.get_interactions())))
 
         system = S.make_classical_ising(self.sparse.gen_spin(self.seed_for_spin), csr_sparse)
 
