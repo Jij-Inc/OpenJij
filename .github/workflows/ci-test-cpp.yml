@@ -57,17 +57,6 @@ jobs:
         ls  C:/vcpkg
         MSBuild.exe -version > msbuild_version.txt
         cat msbuild_version.txt
-    - name: Cache vcpkg
-      uses: actions/cache@v4
-      if: ${{ matrix.os == 'windows-latest'}}
-      with:
-         path: |
-           C:/Users/runneradmin/AppData/Local/vcpkg/archives
-         key: ${{ matrix.os }}-vcpkg-${{ hashFiles('msbuild_version.txt') }}
-         restore-keys: |
-           ${{ matrix.os }}-vcpkg-${{ hashFiles('msbuild_version.txt') }}
-           ${{ matrix.os }}-vcpkg
-           # C:/vcpkg/installed
     - name: Install Dep on windows
       if: ${{ matrix.os == 'windows-latest'}}
       shell: powershell
@@ -83,22 +72,10 @@ jobs:
          vcpkg --triplet x64-windows-static install nlohmann-json
          vcpkg --triplet x64-windows install nlohmann-json
          vcpkg integrate install
-    #    vcpkg --triplet x64-windows-static install openblas
     - name: Install CMake 
       run: |
         pip install cmake
         cmake --version
-    - name: sccache
-      uses: hendrikmuhs/ccache-action@v1.2
-      with:
-          verbose: 2
-          variant: sccache
-          max-size: 1G
-          key: ${{ matrix.os }}-cpp-sccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ env.RAND }}
-          restore-keys: |
-               ${{ matrix.os }}-cpp-sccache-${{ hashFiles('**/CMakeLists.txt') }}-${{ env.RAND }}
-               ${{ matrix.os }}-cpp-sccache-${{ hashFiles('**/CMakeLists.txt') }}
-               ${{ matrix.os }}-cpp-sccache
     - name: Prepare 
       shell: bash
       run: mkdir build
@@ -108,8 +85,6 @@ jobs:
       run: >
         cmake 
         -DCMAKE_BUILD_TYPE=Debug 
-        -DCMAKE_C_COMPILER_LAUNCHER=sccache 
-        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DENABLE_COVERAGE=On
         -S .
         -B build
@@ -119,8 +94,6 @@ jobs:
       run: >
         cmake 
         -DCMAKE_BUILD_TYPE=Debug 
-        -DCMAKE_C_COMPILER_LAUNCHER=sccache 
-        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -S .
         -B build
     - name: CMake Configure
@@ -129,8 +102,6 @@ jobs:
       run: >
         cmake 
         -DCMAKE_BUILD_TYPE=Debug 
-        -DCMAKE_C_COMPILER_LAUNCHER=sccache 
-        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
         -S .
         -B build
@@ -140,17 +111,6 @@ jobs:
         cmake  
         --build build
         --parallel
-    - name: CTest Help
-      shell: bash
-      working-directory: build
-      run: |
-        ctest --help 
-    #- name: Run cimod_test
-    #  if: ${{ matrix.os == 'windows-latest'}}
-    #  shell: bash
-    #  working-directory: build
-    #  run: |
-    #    ./tests/Debug/cimod_test.exe 
     - name: CMake Test
       shell: bash
       working-directory: build
@@ -159,31 +119,6 @@ jobs:
         --extra-verbose
         --parallel
         --schedule-random
-    # TODO: Skip as currently (2025/2/27) it is not working
-    #- name: Run gcov
-    #  if: ${{ matrix.os == 'ubuntu-latest'}}
-    #  shell: bash
-    #  working-directory: build
-    #  run: |
-    #    gcov  --object-directory ./tests/CMakeFiles/openjij_test.dir -p -l -b ./tests/CMakeFiles/cxxjij_test.dir/cxxtest.cpp.gcda
-    # TODO: Skip as currently (2025/2/27) it is not working
-    #- name: Run gcov
-    #  if: ${{ matrix.os == 'ubuntu-latest'}}
-    #  shell: bash
-    #  run: |
-    #    gcov   --object-directory ./build/tests/CMakeFiles/openjij_test.dir -p -l -b ./build/tests/CMakeFiles/cxxjij_test.dir/cxxtest.cpp.gcda
-    #- name: Run gcov
-    #  if: ${{ matrix.os == 'ubuntu-latest'}}
-    #  shell: bash
-    #  run: |
-    #    cd build/tests/CMakeFiles/cxxjij_test.dir
-    #    gcov  --object-directory ./  -p -l -b cxxtest.cpp.gcda
-    - name: du -a 
-      shell: bash
-      if: always()
-      run: |
-        cd build 
-        du -a
     - uses: codecov/codecov-action@v5
       if: ${{ matrix.os == 'ubuntu-latest'}}
       continue-on-error: true

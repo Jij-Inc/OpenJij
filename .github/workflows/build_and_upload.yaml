@@ -51,6 +51,9 @@ jobs:
          - artifact: wheel-linux_x86_64_python312
            python: /opt/python/cp312-cp312/bin/python
            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+         - artifact: wheel-linux_x86_64_python313
+           python: /opt/python/cp313-cp313/bin/python
+           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
                
     steps:
       - uses: actions/checkout@v4       
@@ -68,17 +71,6 @@ jobs:
           ${{matrix.python}} -m pip install pip-tools 
           ${{matrix.python}} -m piptools compile setup.cfg
           ${{matrix.python}} -m piptools compile build-requirements.in
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            /var/cache/dnf/
-          key: ${{ runner.os }}-intel-${{ hashFiles('python_version.txt') }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('build-requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-intel-${{ hashFiles('python_version.txt') }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('build-requirements.txt') }}
-            ${{ runner.os }}-intel-${{ hashFiles('python_version.txt') }}-${{ hashFiles('requirements.txt') }}
-            ${{ runner.os }}-intel-${{ hashFiles('python_version.txt') }}
-            ${{ runner.os }}-intel-
       - name: Install Dependencies
         shell: bash
         run: |
@@ -153,6 +145,10 @@ jobs:
             os: ubuntu-latest
             arch: aarch64
             CIBW_BUILD: cp312-manylinux_aarch64
+          - artifact: wheel-linux_aarch64_python313
+            os: ubuntu-latest
+            arch: aarch64
+            CIBW_BUILD: cp313-manylinux_aarch64
     steps:
       - uses: actions/checkout@v4       
       - name: Set up QEME
@@ -168,7 +164,6 @@ jobs:
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_BUILD: ${{matrix.CIBW_BUILD}}
-          CIBW_SKIP: "cp313-*"
           CIBW_ENVIRONMENT: ""
           CIBW_PLATFORM:  linux
           CIBW_ARCHS: ${{matrix.arch}}
@@ -182,7 +177,7 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: >
                source scl_source enable gcc-toolset-11 &&
                pip install 'pybind11<3' cmake ninja
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.13"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
@@ -209,10 +204,10 @@ jobs:
       - name: Build wheels on macos x86_64
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_SKIP: "cp313-* pp*"
+          CIBW_SKIP: "pp*"
           CIBW_PLATFORM: macos
           CIBW_ARCHS: x86_64
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.13"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
           CIBW_ENVIRONMENT: >
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
       - uses: actions/upload-artifact@v4
@@ -241,10 +236,10 @@ jobs:
       - name: Build wheels on macos arm64
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_SKIP: "cp313-* pp*"
+          CIBW_SKIP: "pp*"
           CIBW_PLATFORM: macos
           CIBW_ARCHS: arm64
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.13"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
           CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}"
       - uses: actions/upload-artifact@v4
         with:
@@ -300,11 +295,10 @@ jobs:
       - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
         uses: pypa/cibuildwheel@v2.22.0
         env:
-          CIBW_SKIP: "cp313-*"
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.13"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
           
       - uses: actions/upload-artifact@v4
         with:
