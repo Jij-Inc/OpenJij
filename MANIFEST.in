@@ -10,8 +10,6 @@ prune .github
 prune .git
 prune **/include
 
-include setup.py
-include setup.cfg
 include CMakeLists.txt
 include LICENSE
 include README.md

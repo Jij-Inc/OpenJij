@@ -17,8 +17,9 @@
 setuptools_scm[toml]
 cmake 
 ninja; sys_platform != 'win32'
-pybind11
-scikit-build
+pybind11>=2.12.0,<3
+scikit-build-core>=0.10
+oldest-supported-numpy
 
 pytest
 pytest-mock

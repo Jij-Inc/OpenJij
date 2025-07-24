@@ -59,8 +59,8 @@ To install OpenJij from source codes, please install CMake first then install Op
 
 #### cmake setup
 
-If you want to use setup.py instead of PIP, You will need to install CMake>=3.22.\
-We are Highly recommended install CMake via PYPI.
+For development installation, you will need to install CMake>=3.22.\
+We highly recommend installing CMake via PYPI.
 
 ```
 $ pip install -U cmake
@@ -91,12 +91,10 @@ $ git clone git@github.com:OpenJij/OpenJij.git
 $ cd OpenJij
 $ python -m venv .venv
 $ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-$ pip-compile setup.cfg
+$ pip-compile pyproject.toml
 $ pip-compile dev-requirements.in
 $ pip-sync requirements.txt dev-requirements.txt
-# Build C++ extension only (faster than full install)
-$ python setup.py build_ext --inplace
-# Install Python code in editable mode
+# Install Python code and build C++ extension in editable mode
 $ pip install -e . --no-build-isolation
 ```
 
@@ -107,7 +105,7 @@ This setup allows you to:
 
 When you modify C++ code, rebuild with:
 ```sh
-$ python setup.py build_ext --inplace
+$ pip install -e . --no-build-isolation
 ```
 
 ### Troubleshooting Development Setup
@@ -116,7 +114,7 @@ If you encounter issues:
 
 1. **Import errors after editable install**: Make sure C++ extension is built:
    ```sh
-   $ python setup.py build_ext --inplace
+   $ pip install -e . --no-build-isolation
    ```
 
 2. **CMake errors**: Ensure you have CMake > 3.22:
@@ -127,7 +125,7 @@ If you encounter issues:
 3. **Clean rebuild**: Remove build artifacts and rebuild:
    ```sh
    $ rm -rf _skbuild/ openjij/*.so openjij/include/ openjij/share/
-   $ python setup.py build_ext --inplace
+   $ pip install -e . --no-build-isolation
    ```
 
 4. **Check installation**: Verify the setup is working:
@@ -147,12 +145,11 @@ Please follow the existing code style and run tests before submitting a pull req
 $ python -m venv .venv
 $ . .venv/bin/activate
 $ pip install pip-tools 
-$ pip-compile setup.cfg
+$ pip-compile pyproject.toml
 $ pip-compile dev-requirements.in
 $ pip-sync requirements.txt dev-requirements.txt
-$ source .venv/bin/activate
 $ export CMAKE_BUILD_TYPE=Debug
-$ python setup.py --force-cmake install --build-type Debug -G Ninja
+$ pip install -e . --no-build-isolation
 $ python -m pytest tests/ -v --tb=short 
 $ python -m coverage html
 ```
@@ -162,15 +159,12 @@ $ python -m coverage html
 For development, you can build only the C++ extension once and install Python code in editable mode:
 
 ```sh
-# Build C++ extension only (in-place)
-$ python setup.py build_ext --inplace
-
-# Install Python code in editable mode (without rebuilding C++)
+# Install Python code and build C++ extension in editable mode
 $ pip install -e . --no-build-isolation
 
 # Now you can edit Python code and changes will be reflected immediately
 # To rebuild C++ extension after making C++ changes:
-$ python setup.py build_ext --inplace
+$ pip install -e . --no-build-isolation
 ```
 
 This approach allows you to:
@@ -197,7 +191,7 @@ Needs: CMake > 3.22, C++17
 
 ```sh
 # Dependencies are included in dev-requirements.txt
-$ pip-compile setup.cfg
+$ pip-compile pyproject.toml
 $ pip-compile dev-requirements.in
 $ pip-sync requirements.txt dev-requirements.txt
 ```
@@ -216,7 +210,7 @@ With KaTeX
 Need: Graphviz
 
 ``` sh
-$ pip-compile setup.cfg
+$ pip-compile pyproject.toml
 $ pip-compile build-requirements.in
 $ pip-compile doc-requirements.in
 $ pip-sync requirements.txt build-requirements.txt doc-requirements.txt
