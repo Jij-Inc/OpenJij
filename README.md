@@ -193,41 +193,21 @@ $ ctest --extra-verbose --parallel --schedule-random
 
 Needs: CMake > 3.22, C++17
 
-- Format
+- Code Quality Check (Lint & Format)
 
 ```sh
-$ pip-compile format-requirements.in
-$ pip-sync format-requirements.txt
-```
-
-```sh
-$ python -m isort 
-$ python -m black 
-```
-
-- Aggressive Format
-
-```sh
-$ python -m isort --force-single-line-imports --verbose ./openjij
-$ python -m autoflake --in-place --recursive --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables ./openjij
-$ python -m autopep8 --in-place --aggressive --aggressive  --recursive ./openjij
-$ python -m isort ./openjij
-$ python -m black ./openjij
-```
-
-- Lint
-
-```sh
+# Dependencies are included in dev-requirements.txt
 $ pip-compile setup.cfg
 $ pip-compile dev-requirements.in
-$ pip-compile lint-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt lint-requirements.txt
+$ pip-sync requirements.txt dev-requirements.txt
 ```
 
 ```sh
-$ python -m flake8
-$ python -m mypy
-$ python -m pyright
+# Unified linting and formatting with ruff
+$ python -m ruff check .                     # Lint check
+$ python -m ruff format .                    # Format code
+$ python -m ruff check . --fix               # Auto-fix issues
+$ python -m ruff format . --check --diff     # Check format without changing
 ```
 
 ## Python Documentation 

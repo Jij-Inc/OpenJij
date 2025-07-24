@@ -27,3 +27,6 @@ pytest-randomly
 pytest-spec
 coverage
 scipy  # Required for test_cxx.py CSRSparse tests
+
+# Code quality (unified)
+ruff>=0.5.0
