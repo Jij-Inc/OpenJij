@@ -899,7 +899,9 @@ def geometric_ising_beta_schedule(
                 dE_linear = (ising_interaction[:-1, -1].toarray() * random_spin[:-1])
 
             dE_quad_abs = np.abs(dE_quad)
-            rate_dE = np.max(np.abs(dE_linear[dE_quad_abs > THRESHOLD]) /(dE_quad_abs[dE_quad_abs > THRESHOLD].mean() + THRESHOLD))
+            # Recalculate the maximum rate of change in energy if the absolute value of dE_quad is above the threshold
+            if np.any(dE_quad_abs > THRESHOLD):
+                rate_dE = np.max(np.abs(dE_linear[dE_quad_abs > THRESHOLD]) /(dE_quad_abs[dE_quad_abs > THRESHOLD].mean() + THRESHOLD))
 
             dE = dE_quad
             dE_positive = dE[dE > THRESHOLD]
