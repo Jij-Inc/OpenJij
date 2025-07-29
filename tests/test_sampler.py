@@ -278,6 +278,54 @@ class TestSamplers(unittest.TestCase):
         with self.assertRaises(TypeError):
             oj.SQASampler(trotter=10)
 
+    def test_simple_two_variable_cases(self):
+        # Test case 1: (0,0): 1, (1,1): 1 with expected result [0,0]
+        qubo1 = {(0, 0): 1, (1, 1): 1}
+        
+        sampler = oj.SASampler()
+        res = sampler.sample_qubo(qubo1, seed=1)
+        self.assertEqual(len(res.states), 1)
+        self.assertListEqual([0, 0], list(res.states[0]))
+        
+        # Test case 2: (0,0): -1, (1,1): -1 with expected result [1,1]
+        qubo2 = {(0, 0): -1, (1, 1): -1}
+        
+        sampler = oj.SASampler()
+        res = sampler.sample_qubo(qubo2, seed=1)
+        self.assertEqual(len(res.states), 1)
+        self.assertListEqual([1, 1], list(res.states[0]))
+
+    def test_simple_two_variable_cases_with_small_interaction(self):
+        # Test case 1: (0,0): 1, (1,1): 1 with expected result [0,0]
+        qubo1 = {(0, 0): 1, (1, 1): 1, (0, 1): 1e-7}
+        
+        sampler = oj.SASampler()
+        res = sampler.sample_qubo(qubo1, seed=1)
+        self.assertEqual(len(res.states), 1)
+        self.assertListEqual([0, 0], list(res.states[0]))
+        
+        # Test case 2: (0,0): -1, (1,1): -1 with expected result [1,1]
+        qubo2 = {(0, 0): -1, (1, 1): -1, (0, 1): 1e-7}
+        
+        sampler = oj.SASampler()
+        res = sampler.sample_qubo(qubo2, seed=1)
+        self.assertEqual(len(res.states), 1)
+        self.assertListEqual([1, 1], list(res.states[0]))
+    
+    def test_qubo_with_null_interaction(self):
+        # Test case with zero interaction
+        qubo = {}
+        
+        sampler = oj.SASampler()
+        _ = sampler.sample_qubo(qubo, seed=1)
+
+    def test_qubo_with_zero_interaction(self):
+        # Test case with zero interaction
+        qubo = {(0, 0): 0, (1, 1): 0}
+        
+        sampler = oj.SASampler()
+        _ = sampler.sample_qubo(qubo, seed=1)
+
 
 if __name__ == '__main__':
     unittest.main()
