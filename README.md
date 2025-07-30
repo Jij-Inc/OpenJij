@@ -91,11 +91,7 @@ $ git clone git@github.com:OpenJij/OpenJij.git
 $ cd OpenJij
 $ python -m venv .venv
 $ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-$ pip-compile pyproject.toml
-$ pip-compile dev-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt
-# Install Python code and build C++ extension in editable mode
-$ pip install -e . --no-build-isolation
+$ pip install -e .[dev] --no-build-isolation
 ```
 
 This setup allows you to:
@@ -144,12 +140,8 @@ Please follow the existing code style and run tests before submitting a pull req
 ```sh
 $ python -m venv .venv
 $ . .venv/bin/activate
-$ pip install pip-tools 
-$ pip-compile pyproject.toml
-$ pip-compile dev-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt
+$ pip install -e .[dev] --no-build-isolation
 $ export CMAKE_BUILD_TYPE=Debug
-$ pip install -e . --no-build-isolation
 $ python -m pytest tests/ -v --tb=short 
 $ python -m coverage html
 ```
@@ -190,10 +182,8 @@ Needs: CMake > 3.22, C++17
 - Code Quality Check (Lint & Format)
 
 ```sh
-# Dependencies are included in dev-requirements.txt
-$ pip-compile pyproject.toml
-$ pip-compile dev-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt
+# Dependencies are managed in pyproject.toml
+$ pip install -e .[dev]
 ```
 
 ```sh
@@ -210,10 +200,7 @@ With KaTeX
 Need: Graphviz
 
 ``` sh
-$ pip-compile pyproject.toml
-$ pip-compile build-requirements.in
-$ pip-compile doc-requirements.in
-$ pip-sync requirements.txt build-requirements.txt doc-requirements.txt
+$ pip install -e .[dev]
 ```
 
 Please place your document to `docs/tutorial`either markdown or jupyter notebook style.

@@ -27,12 +27,6 @@ jobs:
         name: Install Python
         with:
           python-version: ${{env.Python_Version}}
-      - name: Pip-Tools 
-        shell: bash
-        run: |
-          python -m pip install pip-tools 
-          pip-compile
-          pip-compile dev-requirements.in
       - name: Update
         run: | 
          pip install --upgrade pip wheel setuptools build cmake ninja 
@@ -40,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -eux
-          pip-sync requirements.txt dev-requirements.txt
+          pip install -e .
       - name: Install Dep
         run: | 
          pip install typing-extensions
