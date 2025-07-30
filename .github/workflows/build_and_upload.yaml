@@ -68,7 +68,8 @@ jobs:
         shell: bash
         run: |
           set -eux
-          ${{matrix.python}} -m pip install -e .[build] 
+          ${{matrix.python}} -m pip install --upgrade pip
+          ${{matrix.python}} -m pip install --upgrade build auditwheel
       - name: Build 
         run: |
           set -x
@@ -99,9 +100,6 @@ jobs:
         run: |
           set -x 
           source /opt/intel/oneapi/setvars.sh --force  --config="/tmp/tmp/config.txt"
-          ${{matrix.python}} -m auditwheel -h
-          ${{matrix.python}} -m auditwheel show -h
-          ${{matrix.python}} -m auditwheel repair -h
           du -ah ./dist
           cd dist
           for f in *.whl; do ${{matrix.python}} -m auditwheel show $f; done 
