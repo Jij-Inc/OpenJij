@@ -55,9 +55,9 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://www.openjij.org"
-Source = "https://github.com/OpenJij/OpenJij"
+Source = "https://github.com/Jij-Inc/OpenJij"
 Documentation = "https://openjij.github.io/OpenJij"
-Reference = "https://ref.openjij.org/index.html"
+Reference = "https://jij-inc.github.io/OpenJij-Reference-Page/"
 
 [project.optional-dependencies]
 test = [

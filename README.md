@@ -8,10 +8,9 @@
 [![PyPI download month](https://img.shields.io/pypi/dm/openjij.svg)](https://pypi.python.org/pypi/openjij/)
 [![Downloads](https://static.pepy.tech/badge/openjij)](https://pepy.tech/project/openjij)
 
-[![CPP Test](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-cpp.yml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-cpp.yml)
-[![Python Test](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-python.yaml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-python.yaml)
-[![Build Documentation](https://github.com/OpenJij/OpenJij/actions/workflows/buid-doc.yml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/buid-doc.yml)
-[![codecov](https://codecov.io/gh/OpenJij/OpenJij/branch/main/graph/badge.svg?token=WMSK3GS8E5)](https://codecov.io/gh/OpenJij/OpenJij)
+[![CPP Test](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-cpp.yml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-cpp.yml)
+[![Python Test](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-python.yaml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-python.yaml)
+[![Build Documentation](https://github.com/Jij-Inc/OpenJij/actions/workflows/buid-doc.yml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/buid-doc.yml)
 
 [![DOI](https://zenodo.org/badge/164117633.svg)](https://zenodo.org/badge/latestdoi/164117633)
 
@@ -38,7 +37,7 @@
 
 - [Documents](https://jij-inc.github.io/OpenJij/)
 
-- [C++ Docs](https://openjij.github.io/OpenJij-Reference-Page/index.html)
+- [C++ Docs](https://jij-inc.github.io/OpenJij-Reference-Page/)
 
 ## install
 
