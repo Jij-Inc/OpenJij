@@ -12,7 +12,7 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum CMake policy version"
 FetchContent_Declare(
      nlohmann_json
      GIT_REPOSITORY  https://github.com/nlohmann/json
-     GIT_TAG         v3.12.2
+     GIT_TAG         v3.12.0
      GIT_SHALLOW     TRUE
      )
      

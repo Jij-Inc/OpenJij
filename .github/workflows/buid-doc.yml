@@ -85,7 +85,7 @@ jobs:
          allow_empty_commit: true
          publish_dir: ./public
          publish_branch: main
-         external_repository: OpenJij/OpenJij-Reference-Page
+         external_repository: Jij-Inc/OpenJij-Reference-Page
          destination_dir: www
          user_name: 'github-actions[bot]'
          user_email: 'github-actions[bot]@users.noreply.github.com'
