@@ -10,7 +10,6 @@
 
 [![CPP Test](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-cpp.yml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-cpp.yml)
 [![Python Test](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-python.yaml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-python.yaml)
-[![Build Documentation](https://github.com/Jij-Inc/OpenJij/actions/workflows/buid-doc.yml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/buid-doc.yml)
 
 [![DOI](https://zenodo.org/badge/164117633.svg)](https://zenodo.org/badge/latestdoi/164117633)
 
@@ -19,21 +18,7 @@
 - (optional) cmake >= 3.22
 - (optional) Ninja
 
-[OpenJij Website](https://www.openjij.org/)
-
-### Change **IMPORT**
-
-- OpenJij >= v0.5.0
-
-  ```python
-  import openjij.cxxjij
-  ```
-
-- OpenJij <= v0.4.9
-
-  ```python
-  import cxxjij
-  ```
+- [OpenJij Website](https://www.openjij.org/)
 
 - [Documents](https://jij-inc.github.io/OpenJij/)
 
