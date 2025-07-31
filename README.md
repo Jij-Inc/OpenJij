@@ -114,7 +114,7 @@ OpenJij's C++ extensions are built automatically during installation for optimal
 # Development with C++ code modifications
 $ uv sync --group dev                           # Initial setup
 # ... modify C++ source files ...
-$ uv run pip install -e . --no-build-isolation  # Rebuild C++ extension
+$ uv run pip install .  # Rebuild C++ extension
 $ uv run python -c "import openjij.cxxjij; print('C++ extension updated')"
 ```
 
