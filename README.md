@@ -83,135 +83,109 @@ $ python -m pip install -vvv .
 
 ### Development Install (Recommended for Contributors)
 
-For faster development iteration, use the editable install approach:
+OpenJij uses [uv](https://docs.astral.sh/uv/) for efficient dependency management and reproducible development environments.
 
 ```sh
+# Clone repository
 $ git clone git@github.com:OpenJij/OpenJij.git
 $ cd OpenJij
-$ python -m venv .venv
-$ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-$ pip install -e .[dev] --no-build-isolation
+
+# Install uv (choose one method)
+$ pip install uv                                 # Recommended
+# or: curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
+# or: brew install uv                           # Homebrew
+
+# Set up development environment with exact dependency versions
+$ uv sync --locked --group dev
+
+# Verify installation (includes C++ extension build)
+$ uv run python -c "import openjij; import openjij.cxxjij; print('OpenJij setup complete')"
+$ uv run pytest tests/ -v --tb=short
 ```
 
-This setup allows you to:
-- Edit Python code and see changes immediately (no reinstall needed)
-- Only rebuild C++ when you modify C++ source files
-- Maintain fast development iterations
+### Dependency Groups
 
-When you modify C++ code, rebuild with:
+OpenJij uses [PEP 735](https://peps.python.org/pep-0735/) dependency groups for efficient quantum computing development:
+
+| Group | Purpose | Command | Use Case |
+|-------|---------|---------|----------|
+| **dev** | Full development environment | `uv sync --group dev` | Complete setup with all tools |
+| **test** | Testing and coverage tools | `uv sync --group test` | CI/CD and automated testing |
+| **format** | Code quality and formatting | `uv sync --group format` | Linting and style checks |
+| **build** | Build and packaging tools | `uv sync --group build` | Package creation and distribution |
+
+**Dependency management**:
+- **Reproducible builds** (CI/CD, team collaboration): `uv sync --locked --group dev`
+- **Latest versions** (local development): `uv sync --group dev`
+- **Update dependencies**: `uv lock` or `uv lock --upgrade`
+
+All dependencies are locked in `uv.lock` for consistent environments across different systems.
+
+### C++ Extension Integration
+
+OpenJij's C++ extensions are built automatically during installation for optimal quantum computing performance:
+
 ```sh
-$ pip install -e . --no-build-isolation
+# Development with C++ code modifications
+$ uv sync --group dev                           # Initial setup
+# ... modify C++ source files ...
+$ uv run pip install -e . --no-build-isolation  # Rebuild C++ extension
+$ uv run python -c "import openjij.cxxjij; print('C++ extension updated')"
 ```
-
-### Troubleshooting Development Setup
-
-If you encounter issues:
-
-1. **Import errors after editable install**: Make sure C++ extension is built:
-   ```sh
-   $ pip install -e . --no-build-isolation
-   ```
-
-2. **CMake errors**: Ensure you have CMake > 3.22:
-   ```sh
-   $ pip install -U cmake
-   ```
-
-3. **Clean rebuild**: Remove build artifacts and rebuild:
-   ```sh
-   $ rm -rf _skbuild/ openjij/*.so openjij/include/ openjij/share/
-   $ pip install -e . --no-build-isolation
-   ```
-
-4. **Check installation**: Verify the setup is working:
-   ```sh
-   $ python -c "import openjij; print('Success:', dir(openjij))"
-   ```
-
-## For Contributor
-
-Please follow the existing code style and run tests before submitting a pull request.
 
 ## Test
 
-### Python
+### Python Tests
 
 ```sh
-$ python -m venv .venv
-$ . .venv/bin/activate
-$ pip install -e .[dev] --no-build-isolation
-$ export CMAKE_BUILD_TYPE=Debug
-$ python -m pytest tests/ -v --tb=short 
-$ python -m coverage html
+# Install test dependencies with exact versions
+$ uv sync --locked --group test
+
+# Run comprehensive test suite
+$ uv run pytest tests/ -v --tb=short
+$ uv run pytest tests/ -v --cov=openjij --cov-report=html
+$ uv run python -m coverage html
 ```
 
-### Development with Editable Install
-
-For development, you can build only the C++ extension once and install Python code in editable mode:
+### C++ Tests
 
 ```sh
-# Install Python code and build C++ extension in editable mode
-$ pip install -e . --no-build-isolation
-
-# Now you can edit Python code and changes will be reflected immediately
-# To rebuild C++ extension after making C++ changes:
-$ pip install -e . --no-build-isolation
-```
-
-This approach allows you to:
-- Modify Python code without reinstalling
-- Only rebuild C++ when necessary
-- Faster development iteration
-
-### C++
-
-```sh
+# Build and run C++ tests (independent of Python environment)
 $ mkdir build 
 $ cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
 $ cmake --build build --parallel
 $ cd build
 $ ./tests/cxxjij_test
-# Alternatively  Use CTest 
+
+# Alternative: Use CTest for comprehensive testing
 $ ctest --extra-verbose --parallel --schedule-random
 ```
 
+**Requirements**: CMake ≥ 3.22, C++17 compatible compiler
 
-Needs: CMake > 3.22, C++17
-
-- Code Quality Check (Lint & Format)
-
-```sh
-# Dependencies are managed in pyproject.toml
-$ pip install -e .[dev]
-```
+## Code Quality
 
 ```sh
-# Unified linting and formatting with ruff
-$ python -m ruff check .                     # Lint check
-$ python -m ruff format .                    # Format code
-$ python -m ruff check . --fix               # Auto-fix issues
-$ python -m ruff format . --check --diff     # Check format without changing
+# Install formatting tools with exact versions
+$ uv sync --locked --group format
+
+# Unified ruff-based quality checks
+$ uv run ruff check .                        # Lint check
+$ uv run ruff format .                       # Format code
+$ uv run ruff check . --fix                  # Auto-fix issues
+
+# All-in-one quality verification
+$ uv run ruff check . && uv run ruff format --check .
 ```
 
-## Python Documentation 
-Use Juyter Book for build documentation.   
-With KaTeX    
-Need: Graphviz
+## For Contributors
 
-``` sh
-$ pip install -e .[dev]
-```
+Contributors are welcome! Please follow these guidelines:
 
-Please place your document to `docs/tutorial`either markdown or jupyter notebook style.
-
-```sh
-$ pip install -vvv .
-```
-
-```sh 
-$ jupyter-book build docs --all
-```
-
+1. **Set up development environment**: Use `uv sync --locked --group dev` for consistent setup
+2. **Follow code standards**: Run quality checks before submitting
+3. **Test thoroughly**: Ensure both Python and C++ tests pass
+4. **Document changes**: Update relevant documentation
 
 ## How to use
 

@@ -14,16 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        name: Install Python
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: Install dependencies 
         run: |
-           pip install --upgrade pip wheel setuptools build 
+           uv sync --locked --group build
       - name: Build sdist
         run: |
-          python -m build --sdist --outdir ./dist
+          uv run python -m build --sdist --outdir ./dist
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-sdist
@@ -255,24 +255,6 @@ jobs:
       - name: Add msbuild to PATH
         if: ${{ matrix.os == 'windows-latest'}}
         uses: microsoft/setup-msbuild@v2.0.0
-      - name: Prepare Cache 
-        if: ${{ matrix.os == 'windows-latest'}}
-        shell: bash 
-        run: |
-          set -eux
-          ls  C:/vcpkg
-          MSBuild.exe -version > msbuild_version.txt
-          cat msbuild_version.txt
-      - name: Cache vcpkg
-        uses: actions/cache@v4
-        if: ${{ matrix.os == 'windows-latest'}}
-        with:
-           path: |
-             C:/Users/runneradmin/AppData/Local/vcpkg/archives
-           key: ${{ matrix.os }}-vcpkg-${{ hashFiles('msbuild_version.txt') }}
-           restore-keys: |
-             ${{ matrix.os }}-vcpkg-${{ hashFiles('msbuild_version.txt') }}
-             ${{ matrix.os }}-vcpkg
       - name: Install Dependency 
         shell: bash 
         run: |

@@ -29,22 +29,22 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python 
-      uses: actions/setup-python@v5
+    - name: Install uv and set Python version
+      uses: astral-sh/setup-uv@v6
       with:
-        python-version : '3.10'
+        python-version: '3.12'
     - name: Install Dep on linux
       if: ${{ matrix.os == 'ubuntu-latest'}}
       shell: bash
       run: |
-        pip install ninja
+        uv tool install ninja
         sudo apt-get install -y libeigen3-dev 
         sudo apt-get install -y libopenblas-dev lcov
     - name: Install Dep on macos
       if: ${{ matrix.os == 'macos-latest'}}
       shell: bash
       run: |
-        pip install ninja
+        uv tool install ninja
         brew install eigen nlohmann-json lcov libomp
     - name: Add msbuild to PATH
       if: ${{ matrix.os == 'windows-latest'}}
@@ -74,7 +74,7 @@ jobs:
          vcpkg integrate install
     - name: Install CMake 
       run: |
-        pip install cmake
+        uv tool install cmake
         cmake --version
     - name: Prepare 
       shell: bash

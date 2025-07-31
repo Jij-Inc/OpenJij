@@ -31,26 +31,21 @@ jobs:
       cancel-in-progress: false
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Install uv and set Python version
+      uses: astral-sh/setup-uv@v6
       with:
-        python-version : ${{ matrix.python-version }}
+        python-version: ${{ matrix.python-version }}
     - name: Get Python Version
       shell: bash
       run: |
           set -eux
           python --version > python_version.txt
           cat python_version.txt
-    - name: Update
-      shell: bash
-      run: |
-          set -ux
-          python -m pip install --upgrade pip setuptools wheel build cmake
     - name: Install Dependencies
       shell: bash
       run: |
           set -eux
-          pip install -e .[test]    
+          uv sync --locked --group test    
     - name: Install Eigen3 on linux
       if: ${{ matrix.os == 'ubuntu-latest'}}
       run: |
@@ -91,7 +86,7 @@ jobs:
       run: |
         set -eux
         export CMAKE_BUILD_TYPE=Debug
-        pip install -vvv . 
+        uv pip install -vvv . 
     - name: Build & Install    
       if: ${{ matrix.os == 'macos-latest'}}
       shell: bash
@@ -99,7 +94,7 @@ jobs:
         set -eux
         export CIBUILDWHEEL=1
         export CMAKE_BUILD_TYPE=Debug
-        pip install -vvv . 
+        uv pip install -vvv . 
     - name: Build & Install    
       if: ${{ matrix.os == 'windows-latest'}}
       shell: bash 
@@ -107,19 +102,19 @@ jobs:
         set -eux
         export CMAKE_BUILD_TYPE=Debug
         export CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-        pip install -vvv .
+        uv pip install -vvv .
     - name: Test 
       shell: bash
       run: |
         set -eux
-        pytest 
+        uv run pytest tests/ -v --cov=openjij
     - name: Generate
       shell: bash
       run: |
           set -eux
-          python -m coverage xml
-          python -m coverage json
-          python -m coverage lcov
+          uv run python -m coverage xml
+          uv run python -m coverage json
+          uv run python -m coverage lcov
     - uses: codecov/codecov-action@v5
       continue-on-error: true
       with:

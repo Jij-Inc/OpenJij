@@ -59,35 +59,31 @@ Source = "https://github.com/Jij-Inc/OpenJij"
 Documentation = "https://openjij.github.io/OpenJij"
 Reference = "https://jij-inc.github.io/OpenJij-Reference-Page/"
 
-[project.optional-dependencies]
+# PEP 735準拠のdependency-groups（cimod実証済みパターン）
+[dependency-groups]
+build = [
+    "build>=1.2",
+]
+
 test = [
     "pytest>=8.0",
     "pytest-mock",
-    "pytest-cov", 
+    "pytest-cov",
     "pytest-randomly",
     "pytest-spec",
     "coverage",
-    "scipy" 
-]
-
-build = [
-    "build>=1.2", 
+    "scipy"
 ]
 
 format = [
     "ruff>=0.5.0",
 ]
 
+# cimod準拠のinclude-group階層構造
 dev = [
-    "build>=1.2",
-    "pytest>=8.0",
-    "pytest-mock",
-    "pytest-cov", 
-    "pytest-randomly",
-    "pytest-spec",
-    "coverage",
-    "scipy",
-    "ruff>=0.5.0"
+    {include-group = "build"},
+    {include-group = "test"},
+    {include-group = "format"}
 ]
 
 [tool.scikit-build]
