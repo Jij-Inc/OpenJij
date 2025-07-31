@@ -117,7 +117,7 @@ log_auto_indent = true
 junit_logging = "all"
 
 [tool.cibuildwheel]
-skip = ["cp36*", "cp37*", "*musllinux_x86_64", "*musllinux_aarch64", "pp*"]
+skip = ["cp36*", "cp37*", "cp38*", "*musllinux_x86_64", "*musllinux_aarch64", "pp*"]
 build-verbosity = 1
 dependency-versions = "latest"
 
