@@ -14,14 +14,91 @@
 
 [build-system]
 requires = [
-   'setuptools_scm[toml]', 
-   'setuptools',
-   'wheel',
-   'build',
-   'pybind11 < 3',
-   'scikit-build',
-   ]
-build-backend = "setuptools.build_meta"
+    "scikit-build-core>=0.10",
+    "setuptools_scm[toml]",
+    "pybind11>=2.12.0,<3",
+    "oldest-supported-numpy",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "openjij"
+dynamic = ["version"]
+description = "Framework for the Ising model and QUBO."
+readme = "README.md"
+license = {text = "Apache License 2.0"}
+authors = [
+    {name = "Jij Inc.", email = "info@openjij.org"}
+]
+requires-python = ">=3.9, <3.14"
+dependencies = [
+    "numpy >=1.19.3, < 2.4.0",
+    "dimod >=0.9.11, < 0.13.0",
+    "jij-cimod >= 1.7.0, < 1.8.0",
+]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11", 
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+]
+
+[project.urls]
+Homepage = "https://www.openjij.org"
+Source = "https://github.com/Jij-Inc/OpenJij"
+Documentation = "https://openjij.github.io/OpenJij"
+Reference = "https://jij-inc.github.io/OpenJij-Reference-Page/"
+
+# PEP 735準拠のdependency-groups（cimod実証済みパターン）
+[dependency-groups]
+build = [
+    "build>=1.2",
+]
+
+test = [
+    "pytest>=8.0",
+    "pytest-mock",
+    "pytest-cov",
+    "pytest-randomly",
+    "pytest-spec",
+    "coverage",
+    "scipy"
+]
+
+format = [
+    "ruff>=0.5.0",
+]
+
+# cimod準拠のinclude-group階層構造
+dev = [
+    {include-group = "build"},
+    {include-group = "test"},
+    {include-group = "format"}
+]
+
+[tool.scikit-build]
+minimum-version = "0.10"
+strict-config = true
+build.verbose = true
+wheel.install-dir = "openjij"
+wheel.packages = [
+    "openjij",
+    "openjij.model",
+    "openjij.sampler",
+    "openjij.utils",
+]
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+sdist.include = ["openjij/_version.py"]
 
 [tool.setuptools_scm]
 write_to = "openjij/_version.py"
@@ -39,79 +116,15 @@ console_output_style = "count"
 log_auto_indent = true
 junit_logging = "all"
 
-[tool.flake8] 
-show-source = true
-statistics = true
-doctests = true
-max-complexity = 10
-max-line-length = 999 
-
-[tool.isort]
-profile= "black"
-multi_line_output = 3
-force_grid_wrap = 0
-include_trailing_comma = false
-ensure_newline_before_comments = true
-use_parentheses = true 
-balanced_wrapping = false
-lines_between_types = 1
-#order_by_type = true 
-combine_as_imports = true
-combine_star = true
-combine_straight_imports = true
-group_by_package = true
-auto_identify_namespace_packages = true
-src_paths = ["openjij", "tests"]
-
-[tool.black]
-target-version = ['py39', 'py310', 'py311', 'py312']
-
-[tool.mypy]
-ignore_missing_imports = true
-#show_traceback = true
-warn_return_any = true
-warn_unused_configs = true
-warn_unreachable = true
-namespace_packages = true
-explicit_package_bases = true
-#show_error_context = true 
-#show_column_numbers = true
-
-[tool.pyright]
-pythonVersion = "3.9"
-typeCheckingMode = "basic"
-include = [
-    "openjij", 
-    "tests",
-  ]
-ignore = [ 
-  "*.c", 
-  "*.so",
-]
-reportImportCycles = 'warning'
-reportUnusedImport = 'warning'
-reportUnusedVariable =  'warning'
-reportDuplicateImport = 'warning'
-
 [tool.cibuildwheel]
-skip = ["cp36*", "cp37*", "*musllinux_x86_64", "*musllinux_aarch64", "pp*"]
+skip = ["cp36*", "cp37*", "cp38*", "*musllinux_x86_64", "*musllinux_aarch64", "pp*"]
 build-verbosity = 1
 dependency-versions = "latest"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
-build-frontend = "build"
-#environment = "-CFLAGS='-march=haswell' -CXXFLAGS='-march=haswell' -FFLAGS='-march=haswell'"
 manylinux-x86_64-image ="quay.io/pypa/manylinux_2_28_x86_64:latest"
 manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
-#before-all = [ 
-#    "dnf config-manager --set-enabled powertools",
-#    "dnf makecache --refresh",
-#    "dnf -y --enablerepo=powertools install openblas-static",
-#    "dnf -y --enablerepo=powertools install lapack-static",
-#    "dnf -y install gcc-toolset-11", 
-#    "dnf -y --enablerepo=powertools install eigen3-devel",
-#]
 before-build = [ 
     "source scl_source enable gcc-toolset-11",
     "pip install --upgrade pip wheel build 'pybind11<3' cmake ninja", 
@@ -120,30 +133,73 @@ repair-wheel-command = "auditwheel repair --lib-sdir . -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
-build-frontend = "build"
-#before-all = [ 
-#    "brew install eigen nlohmann-json",
-#]
-#environment = "CFLAGS='-O3 -pipe' CXXFLAGS='-O3 -pipe'" 
 before-build = [ 
     "pip install --upgrade pip wheel build 'pybind11<3' cmake ninja", 
 ]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
-#build-frontend = "build"
-#environment = "CMAKE_TOOLCHAIN_FILE='C:/vcpkg/scripts/buildsystems/vcpkg.cmake'" 
-#before-all = [ 
-#    "vcpkg update",
-#    "vcpkg --triplet x64-windows install eigen3 --recurse", 
-#    "vcpkg --triplet x64-windows install nlohmann-json --recurse",
-#    "vcpkg --triplet x64-windows-static install eigen3 --recurse",
-#    "vcpkg --triplet x64-windows-static install nlohmann-json --recurse",  
-#    "vcpkg integrate install",
-#]
-#"vcpkg --triplet x64-windows-static install openblas[threads] --recurse", 
-#"vcpkg --triplet x64-windows-static install clapack --recurse", 
 before-build = [ 
     'pip install --upgrade pip wheel build cmake "pybind11<3" delvewheel', 
 ]
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+
+# Ruff configuration
+[tool.ruff]
+line-length = 120  # OpenJij既存設定を継承（999→120段階的調整）
+target-version = "py39"  # 最小サポート版（python_requires = >=3.9）
+exclude = [
+    ".git",
+    ".venv", 
+    "__pycache__",
+    "build",
+    "dist", 
+    "_skbuild",
+    "openjij/cxxjij",  # C++バインディング除外
+    "include/",        # C++ヘッダー除外
+]
+
+[tool.ruff.lint]
+# Phase 1: 基本設定（ruffベストプラクティス準拠）
+select = [
+    "E",               # pycodestyle errors
+    "F",               # Pyflakes
+    "I",               # isort
+    "UP",              # pyupgrade
+    
+    # Phase 2: 品質向上（将来実装予定）
+    # "B",               # flake8-bugbear
+    # "SIM",             # simplify
+    
+    # Phase 3: 包括的品質（将来実装予定）
+    # "N",               # pep8-naming
+    # "RUF",             # ruff固有ルール
+    
+    # Advanced（長期的検討）
+    # "ANN",             # 型アノテーション
+    # "C90",             # 複雑度チェック
+]
+ignore = [
+    "E501",    # 行長制限無視（120文字移行期のため一時的に）
+    "UP007",   # typing.Union → X | Y (Python 3.9互換性維持)
+    "S101",    # assert使用許可（pytest用）
+    "T20",     # print文許可（デバッグ用）
+]
+
+# 自動修正対象
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+lines-between-types = 1
+known-first-party = ["openjij"]  # OpenJij既存設定をruff形式に変換
+
+[tool.ruff.format]
+# black互換設定
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10

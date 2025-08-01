@@ -13,7 +13,7 @@ concurrency:
       cancel-in-progress: false
 
 env:
-  Python_Version: '3.10'
+  Python_Version: '3.12'
 
 jobs:
   build_docs:
@@ -23,43 +23,18 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        name: Install Python
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{env.Python_Version}}
-      - name: Python Cache Key
-        shell: bash
-        run: |
-          echo $(which python) > /tmp/python_version.txt
-      - name: Get pip cache dir
-        shell: bash
-        id: pip-cache
-        run: |
-          echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
-      - name: Pip-Tools 
-        shell: bash
-        run: |
-          python -m pip install pip-tools 
-          pip-compile
-          pip-compile dev-requirements.in
-      - name: pip cache
-        uses: actions/cache@v4
-        with:
-           path: ${{ steps.pip-cache.outputs.dir }}
-           key: ${{ runner.os }}-pip-${{ hashFiles('/tmp/python_version.txt') }}
-           restore-keys: |
-              ${{ runner.os }}-pip-
-      - name: Update
-        run: | 
-         pip install --upgrade pip wheel setuptools build cmake ninja 
       - name: Install Dependencies
         shell: bash
         run: |
           set -eux
-          pip-sync requirements.txt dev-requirements.txt
+          uv sync --locked --group build
       - name: Install Dep
         run: | 
-         pip install typing-extensions
+         uv pip install typing-extensions
          sudo apt-get install -y libeigen3-dev lcov graphviz mscgen dia pdf2svg astyle
          sudo apt-get install -y doxygen doxygen-doxyparse fonts-liberation python3-breathe
       - name: Prepare 
@@ -86,11 +61,6 @@ jobs:
         run: |
           set -eux
           cp -r ./build/html/* ./public/
-      - name: du -a 
-        shell: bash
-        if: always()
-        run: |
-          du -a
       - name: Prepare tag
         id: prepare_tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -107,7 +77,7 @@ jobs:
          allow_empty_commit: true
          publish_dir: ./public
          publish_branch: main
-         external_repository: OpenJij/OpenJij-Reference-Page
+         external_repository: Jij-Inc/OpenJij-Reference-Page
          destination_dir: www
          user_name: 'github-actions[bot]'
          user_email: 'github-actions[bot]@users.noreply.github.com'

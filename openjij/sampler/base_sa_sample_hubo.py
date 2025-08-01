@@ -1,8 +1,5 @@
 from __future__ import annotations
-try:
-    from typing import Optional, Union
-except ImportError:
-    from typing_extensions import Optional, Union
+from typing import Optional, Union
 
 import time
 from openjij.sampler.response import Response

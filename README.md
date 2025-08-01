@@ -8,46 +8,21 @@
 [![PyPI download month](https://img.shields.io/pypi/dm/openjij.svg)](https://pypi.python.org/pypi/openjij/)
 [![Downloads](https://static.pepy.tech/badge/openjij)](https://pepy.tech/project/openjij)
 
-[![CPP Test](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-cpp.yml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-cpp.yml)
-[![Python Test](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-python.yaml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/ci-test-python.yaml)
-[![Build Documentation](https://github.com/OpenJij/OpenJij/actions/workflows/buid-doc.yml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/buid-doc.yml)
-[![CodeQL](https://github.com/OpenJij/OpenJij/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/OpenJij/OpenJij/actions/workflows/codeql-analysis.yml)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/0204475dc07d48ffa851480d03db759e)](https://www.codacy.com/gh/OpenJij/OpenJij/dashboard?utm_source=github.com&utm_medium=referral&utm_content=OpenJij/OpenJij&utm_campaign=Badge_Grade)
-[![Maintainability](https://api.codeclimate.com/v1/badges/3b2f43f3e601ae74c497/maintainability)](https://codeclimate.com/github/OpenJij/OpenJij/maintainability)
-[![codecov](https://codecov.io/gh/OpenJij/OpenJij/branch/main/graph/badge.svg?token=WMSK3GS8E5)](https://codecov.io/gh/OpenJij/OpenJij)
+[![CPP Test](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-cpp.yml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-cpp.yml)
+[![Python Test](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-python.yaml/badge.svg)](https://github.com/Jij-Inc/OpenJij/actions/workflows/ci-test-python.yaml)
 
 [![DOI](https://zenodo.org/badge/164117633.svg)](https://zenodo.org/badge/latestdoi/164117633)
 
-## Coverage Graph
-
-| **Sunburst**                                                                                                                                                         | **Grid**                                                                                                                                                         | **Icicle**                                                                                                                                                         |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <a href="https://codecov.io/gh/OpenJij/OpenJij"><img src="https://codecov.io/gh/OpenJij/OpenJij/branch/main/graphs/sunburst.svg?token=WMSK3GS8E5" width="100%"/></a> | <a href="https://codecov.io/gh/OpenJij/OpenJij"><img src="https://codecov.io/gh/OpenJij/OpenJij/branch/main/graphs/tree.svg?token=WMSK3GS8E5" width="100%"/></a> | <a href="https://codecov.io/gh/OpenJij/OpenJij"><img src="https://codecov.io/gh/OpenJij/OpenJij/branch/main/graphs/icicle.svg?token=WMSK3GS8E5" width="100%"/></a> |
-
-- python >= 3.8
+- python >= 3.9
 - (optional) gcc >= 7.0.0
 - (optional) cmake >= 3.22
 - (optional) Ninja
 
-[OpenJij Website](https://www.openjij.org/)
-
-### Change **IMPORT**
-
-- OpenJij >= v0.5.0
-
-  ```python
-  import openjij.cxxjij
-  ```
-
-- OpenJij <= v0.4.9
-
-  ```python
-  import cxxjij
-  ```
+- [OpenJij Website](https://www.openjij.org/)
 
 - [Documents](https://jij-inc.github.io/OpenJij/)
 
-- [C++ Docs](https://openjij.github.io/OpenJij-Reference-Page/index.html)
+- [C++ Docs](https://jij-inc.github.io/OpenJij-Reference-Page/)
 
 ## install
 
@@ -68,8 +43,8 @@ To install OpenJij from source codes, please install CMake first then install Op
 
 #### cmake setup
 
-If you want to use setup.py instead of PIP, You will need to install CMake>=3.22.\
-We are Highly recommended install CMake via PYPI.
+For development installation, you will need to install CMake>=3.22.\
+We highly recommend installing CMake via PYPI.
 
 ```
 $ pip install -U cmake
@@ -93,182 +68,109 @@ $ python -m pip install -vvv .
 
 ### Development Install (Recommended for Contributors)
 
-For faster development iteration, use the editable install approach:
+OpenJij uses [uv](https://docs.astral.sh/uv/) for efficient dependency management and reproducible development environments.
 
 ```sh
+# Clone repository
 $ git clone git@github.com:OpenJij/OpenJij.git
 $ cd OpenJij
-$ python -m venv .venv
-$ source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-$ pip-compile setup.cfg
-$ pip-compile dev-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt
-# Build C++ extension only (faster than full install)
-$ python setup.py build_ext --inplace
-# Install Python code in editable mode
-$ pip install -e . --no-build-isolation
+
+# Install uv (choose one method)
+$ pip install uv                                 # Recommended
+# or: curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
+# or: brew install uv                           # Homebrew
+
+# Set up development environment with exact dependency versions
+$ uv sync --locked --group dev
+
+# Verify installation (includes C++ extension build)
+$ uv run python -c "import openjij; import openjij.cxxjij; print('OpenJij setup complete')"
+$ uv run pytest tests/ -v --tb=short
 ```
 
-This setup allows you to:
-- Edit Python code and see changes immediately (no reinstall needed)
-- Only rebuild C++ when you modify C++ source files
-- Maintain fast development iterations
+### Dependency Groups
 
-When you modify C++ code, rebuild with:
+OpenJij uses [PEP 735](https://peps.python.org/pep-0735/) dependency groups for efficient quantum computing development:
+
+| Group | Purpose | Command | Use Case |
+|-------|---------|---------|----------|
+| **dev** | Full development environment | `uv sync --group dev` | Complete setup with all tools |
+| **test** | Testing and coverage tools | `uv sync --group test` | CI/CD and automated testing |
+| **format** | Code quality and formatting | `uv sync --group format` | Linting and style checks |
+| **build** | Build and packaging tools | `uv sync --group build` | Package creation and distribution |
+
+**Dependency management**:
+- **Reproducible builds** (CI/CD, team collaboration): `uv sync --locked --group dev`
+- **Latest versions** (local development): `uv sync --group dev`
+- **Update dependencies**: `uv lock` or `uv lock --upgrade`
+
+All dependencies are locked in `uv.lock` for consistent environments across different systems.
+
+### C++ Extension Integration
+
+OpenJij's C++ extensions are built automatically during installation for optimal quantum computing performance:
+
 ```sh
-$ python setup.py build_ext --inplace
-```
-
-### Troubleshooting Development Setup
-
-If you encounter issues:
-
-1. **Import errors after editable install**: Make sure C++ extension is built:
-   ```sh
-   $ python setup.py build_ext --inplace
-   ```
-
-2. **CMake errors**: Ensure you have CMake > 3.22:
-   ```sh
-   $ pip install -U cmake
-   ```
-
-3. **Clean rebuild**: Remove build artifacts and rebuild:
-   ```sh
-   $ rm -rf _skbuild/ openjij/*.so openjij/include/ openjij/share/
-   $ python setup.py build_ext --inplace
-   ```
-
-4. **Check installation**: Verify the setup is working:
-   ```sh
-   $ python -c "import openjij; print('Success:', dir(openjij))"
-   ```
-
-## For Contributor
-
-Use `pre-commit` for auto chech before git commit.
-`.pre-commit-config.yaml`
-
-```
-# pipx install pre-commit 
-# or 
-# pip install pre-commit
-pre-commit install
+# Development with C++ code modifications
+$ uv sync --group dev                           # Initial setup
+# ... modify C++ source files ...
+$ uv run pip install .  # Rebuild C++ extension
+$ uv run python -c "import openjij.cxxjij; print('C++ extension updated')"
 ```
 
 ## Test
 
-### Python
+### Python Tests
 
 ```sh
-$ python -m venv .venv
-$ . .venv/bin/activate
-$ pip install pip-tools 
-$ pip-compile setup.cfg
-$ pip-compile dev-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt
-$ source .venv/bin/activate
-$ export CMAKE_BUILD_TYPE=Debug
-$ python setup.py --force-cmake install --build-type Debug -G Ninja
-$ python setup.py --build-type Debug test 
-$ python -m coverage html
+# Install test dependencies with exact versions
+$ uv sync --locked --group test
+
+# Run comprehensive test suite
+$ uv run pytest tests/ -v --tb=short
+$ uv run pytest tests/ -v --cov=openjij --cov-report=html
+$ uv run python -m coverage html
 ```
 
-### Development with Editable Install
-
-For development, you can build only the C++ extension once and install Python code in editable mode:
+### C++ Tests
 
 ```sh
-# Build C++ extension only (in-place)
-$ python setup.py build_ext --inplace
-
-# Install Python code in editable mode (without rebuilding C++)
-$ pip install -e . --no-build-isolation
-
-# Now you can edit Python code and changes will be reflected immediately
-# To rebuild C++ extension after making C++ changes:
-$ python setup.py build_ext --inplace
-```
-
-This approach allows you to:
-- Modify Python code without reinstalling
-- Only rebuild C++ when necessary
-- Faster development iteration
-
-### C++
-
-```sh
+# Build and run C++ tests (independent of Python environment)
 $ mkdir build 
 $ cmake -DCMAKE_BUILD_TYPE=Debug -S . -B build
 $ cmake --build build --parallel
 $ cd build
 $ ./tests/cxxjij_test
-# Alternatively  Use CTest 
+
+# Alternative: Use CTest for comprehensive testing
 $ ctest --extra-verbose --parallel --schedule-random
 ```
 
+**Requirements**: CMake ≥ 3.22, C++17 compatible compiler
 
-Needs: CMake > 3.22, C++17
-
-- Format
-
-```sh
-$ pip-compile format-requirements.in
-$ pip-sync format-requirements.txt
-```
+## Code Quality
 
 ```sh
-$ python -m isort 
-$ python -m black 
+# Install formatting tools with exact versions
+$ uv sync --locked --group format
+
+# Unified ruff-based quality checks
+$ uv run ruff check .                        # Lint check
+$ uv run ruff format .                       # Format code
+$ uv run ruff check . --fix                  # Auto-fix issues
+
+# All-in-one quality verification
+$ uv run ruff check . && uv run ruff format --check .
 ```
 
-- Aggressive Format
+## For Contributors
 
-```sh
-$ python -m isort --force-single-line-imports --verbose ./openjij
-$ python -m autoflake --in-place --recursive --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables ./openjij
-$ python -m autopep8 --in-place --aggressive --aggressive  --recursive ./openjij
-$ python -m isort ./openjij
-$ python -m black ./openjij
-```
+Contributors are welcome! Please follow these guidelines:
 
-- Lint
-
-```sh
-$ pip-compile setup.cfg
-$ pip-compile dev-requirements.in
-$ pip-compile lint-requirements.in
-$ pip-sync requirements.txt dev-requirements.txt lint-requirements.txt
-```
-
-```sh
-$ python -m flake8
-$ python -m mypy
-$ python -m pyright
-```
-
-## Python Documentation 
-Use Juyter Book for build documentation.   
-With KaTeX    
-Need: Graphviz
-
-``` sh
-$ pip-compile setup.cfg
-$ pip-compile build-requirements.in
-$ pip-compile doc-requirements.in
-$ pip-sync requirements.txt build-requirements.txt doc-requirements.txt
-```
-
-Please place your document to `docs/tutorial`either markdown or jupyter notebook style.
-
-```sh
-$ pip install -vvv .
-```
-
-```sh 
-$ jupyter-book build docs --all
-```
-
+1. **Set up development environment**: Use `uv sync --locked --group dev` for consistent setup
+2. **Follow code standards**: Run quality checks before submitting
+3. **Test thoroughly**: Ensure both Python and C++ tests pass
+4. **Document changes**: Update relevant documentation
 
 ## How to use
 
