@@ -176,13 +176,13 @@ struct SuwaTodoUpdater {
     }
 
     double prob_sum = 0.0;
-    const double rand = dist(sa_system.random_number_engine);
+    const double rand = dist(sa_system.random_number_engine) * weight_list[now_state];
 
     for (std::int64_t j = 0; j < var.num_states; ++j) {
       const double d_ij = sum_weight_list[now_state + 1] - sum_weight_list[j] +
                           sum_weight_list[1];
-      prob_sum += std::max(0.0, std::min({d_ij, 1.0 + weight_list[j] - d_ij,
-                                          1.0, weight_list[j]}));
+      prob_sum += std::max(0.0, std::min({d_ij, weight_list[now_state] + weight_list[j] - d_ij,
+                                          weight_list[now_state], weight_list[j]}));
       if (rand < prob_sum) {
         std::int64_t new_state;
         if (j == max_weight_state) {
