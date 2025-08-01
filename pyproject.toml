@@ -16,7 +16,7 @@
 requires = [
     "scikit-build-core>=0.10",
     "setuptools_scm[toml]",
-    "pybind11>=2.12.0,<3",
+    "pybind11>=2.12.0,<4",
     "oldest-supported-numpy",
 ]
 build-backend = "scikit_build_core.build"
