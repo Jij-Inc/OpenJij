@@ -68,7 +68,7 @@ struct HeatBathUpdater {
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double _progress) {
     if (sa_system.OnlyMultiLinearCoeff(index)) {
-        return ForBilinear(sa_system, index, T, _progress);
+      return ForBilinear(sa_system, index, T, _progress);
     } else {
       return ForAll(sa_system, index, T, _progress);
     }
@@ -77,25 +77,36 @@ struct HeatBathUpdater {
   template <typename SystemType>
   std::int64_t ForAll(SystemType &sa_system, const std::int64_t index,
                       const double T, const double _progress) {
+
+    const auto [max_weight_state_value, min_dE] = sa_system.GetMinEnergyDifference(index);
     const auto &var = sa_system.GetState()[index];
     const double beta = 1.0 / T;
+    double z = 0.0;
+
+    // Calculate the partition function
+    for (std::int64_t i = 0; i < var.num_states; ++i) {
+      const double dE = sa_system.GetEnergyDifference(index, var.GetValueFromState(i)) - min_dE;
+      z += std::exp(-beta * dE);
+    }
+
+    // Select a state based on the partition function
     std::int64_t selected_state_number = -1;
-    double max_z = -std::numeric_limits<double>::infinity();
+    double cumulative_prob = 0.0;
+    const double rand = dist(sa_system.random_number_engine) * z;
 
     for (std::int64_t i = 0; i < var.num_states; ++i) {
-      const double g =
-          -std::log(-std::log(dist(sa_system.random_number_engine)));
-      const double z = -beta * sa_system.GetEnergyDifference(
-                                   index, var.GetValueFromState(i)) +
-                       g;
-      if (z > max_z) {
-        max_z = z;
+      const double dE = sa_system.GetEnergyDifference(index, var.GetValueFromState(i)) - min_dE;
+      cumulative_prob += std::exp(-beta * dE);
+      if (rand <= cumulative_prob) {
         selected_state_number = i;
+        break;
       }
     }
+
     if (selected_state_number == -1) {
       throw std::runtime_error("No state selected.");
     }
+
     return var.GetValueFromState(selected_state_number);
   }
 
@@ -137,66 +148,53 @@ struct SuwaTodoUpdater {
                                 const double T, const double _progress) {
     const auto &var = sa_system.GetState()[index];
     const std::int64_t max_num_state = var.num_states;
-
     std::vector<double> weight_list(max_num_state, 0.0);
-    std::vector<double> sum_weight_list(max_num_state + 1, 0.0);
-    std::vector<double> dE_list(max_num_state, 0.0);
+    std::vector<double> sum_weight_list(max_num_state, 0.0);
 
-    const auto [max_weight_state_value, min_dE] =
-        sa_system.GetMinEnergyDifference(index);
-    const std::int64_t max_weight_state =
-        max_weight_state_value - var.lower_bound;
+    const auto [max_weight_state_value, min_dE] = sa_system.GetMinEnergyDifference(index);
+    const auto max_weight_state = var.GetStateFromValue(max_weight_state_value);
 
-    for (std::int64_t state = 0; state < var.num_states; ++state) {
-      const std::int64_t value = var.GetValueFromState(state);
-      dE_list[state] = sa_system.GetEnergyDifference(index, value) - min_dE;
+    for (std::int64_t i = 0; i < max_num_state; ++i) {
+      const std::int64_t state = (i == 0) ? max_weight_state : ((i == max_weight_state) ? 0 : i);
+      const double dE = sa_system.GetEnergyDifference(index, var.GetValueFromState(state)) - min_dE;
+      weight_list[i] = std::exp(-dE / T);
+      sum_weight_list[i] = (i == 0) ? weight_list[i] : sum_weight_list[i - 1] + weight_list[i];
     }
 
-    weight_list[0] = std::exp(-dE_list[max_weight_state] / T);
-    sum_weight_list[1] = weight_list[0];
-
-    for (std::int64_t state = 1; state < var.num_states; ++state) {
-      if (state == max_weight_state) {
-        weight_list[state] = std::exp(-dE_list[0] / T);
-      } else {
-        weight_list[state] = std::exp(-dE_list[state] / T);
-      }
-      sum_weight_list[state + 1] = sum_weight_list[state] + weight_list[state];
-    }
-
-    sum_weight_list[0] = sum_weight_list[var.num_states];
-    const std::int64_t current_state = var.value - var.lower_bound;
-    std::int64_t now_state;
+    std::int64_t current_state = var.GetStateFromValue(var.value);
     if (current_state == 0) {
-      now_state = max_weight_state;
+      current_state = max_weight_state;
     } else if (current_state == max_weight_state) {
-      now_state = 0;
-    } else {
-      now_state = current_state;
+      current_state = 0;
     }
 
+    const double w_0 = weight_list[0];
+    const double w_c = weight_list[current_state];
+    const double sum_w_c = sum_weight_list[current_state];
+    const double rand = dist(sa_system.random_number_engine) * w_c;
+    std::int64_t selected_state = -1;
     double prob_sum = 0.0;
-    const double rand = dist(sa_system.random_number_engine) * weight_list[now_state];
 
-    for (std::int64_t j = 0; j < var.num_states; ++j) {
-      const double d_ij = sum_weight_list[now_state + 1] - sum_weight_list[j] +
-                          sum_weight_list[1];
-      prob_sum += std::max(0.0, std::min({d_ij, weight_list[now_state] + weight_list[j] - d_ij,
-                                          weight_list[now_state], weight_list[j]}));
-      if (rand < prob_sum) {
-        std::int64_t new_state;
-        if (j == max_weight_state) {
-          new_state = 0;
-        } else if (j == 0) {
-          new_state = max_weight_state;
+    for (std::int64_t j = 0; j < max_num_state; ++j) {
+      const double d_ij = sum_w_c - sum_weight_list[(j - 1 + max_num_state) % max_num_state] + w_0;
+      prob_sum += std::max(0.0, std::min({d_ij, w_c + (weight_list[j] - d_ij), w_c, weight_list[j]}));
+      if (rand <= prob_sum) {
+        if (j == 0) {
+          selected_state = max_weight_state;
+        } else if (j == max_weight_state) {
+          selected_state = 0;
         } else {
-          new_state = j;
+          selected_state = j;
         }
-        return var.GetValueFromState(new_state);
+        break;
       }
     }
 
-    return var.GetValueFromState(var.num_states - 1);
+    if (selected_state == -1) {
+      throw std::runtime_error("No state selected.");
+    }
+
+    return var.GetValueFromState(selected_state);
   }
 
   std::uniform_real_distribution<double> dist{0.0, 1.0};
