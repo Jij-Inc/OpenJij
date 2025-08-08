@@ -16,6 +16,7 @@ from typing import Optional, Union, Any
 import cimod
 import dimod
 import math
+import os
 import time
 import numpy as np
 
@@ -80,7 +81,10 @@ class SASampler(BaseSampler):
 
         # Set default parameters
         num_sweeps = 1000
-        num_reads = 1
+        # Set num_reads default based on CPU count
+        cpu_count = os.cpu_count() or 1
+        num_reads = min(cpu_count, 10)
+        num_threads = 1
         beta_min = None
         beta_max = None
         schedule = None
@@ -91,6 +95,7 @@ class SASampler(BaseSampler):
             "num_sweeps": num_sweeps,
             "schedule": schedule,
             "num_reads": num_reads,
+            "num_threads": num_threads,
         }
 
         self._params = self._default_params.copy()
@@ -105,6 +110,20 @@ class SASampler(BaseSampler):
             "singlespinflippolynomial": cxxjij.algorithm.Algorithm_SingleSpinFlip_run,
             "swendsenwang": cxxjij.algorithm.Algorithm_SwendsenWang_run,
         }
+
+    def _get_default_num_threads(self, num_reads):
+        """Calculate default num_threads based on num_reads and available CPUs."""
+        # Get CPU count
+        cpu_count = os.cpu_count() or 1
+        # Check if OMP_NUM_THREADS is set
+        omp_threads = os.environ.get('OMP_NUM_THREADS')
+        if omp_threads:
+            try:
+                cpu_count = min(cpu_count, int(omp_threads))
+            except ValueError:
+                pass
+        # Set num_threads to min of num_reads and cpu_count
+        return min(num_reads, cpu_count)
 
     def _convert_validation_schedule(self, schedule):
         """Checks if the schedule is valid and returns cxxjij schedule."""
@@ -143,6 +162,7 @@ class SASampler(BaseSampler):
         beta_max: Optional[float] = None,
         num_sweeps: Optional[int] = None,
         num_reads: Optional[int] = None,
+        num_threads: Optional[int] = None,
         schedule: Optional[list] = None,
         initial_state: Optional[Union[list, dict]] = None,
         updater: Optional[str] = None,
@@ -158,6 +178,7 @@ class SASampler(BaseSampler):
             beta_max (float): maximum value of inverse temperature
             num_sweeps (int): number of sweeps
             num_reads (int): number of reads
+            num_threads (int): number of threads for parallel execution
             schedule (list): list of inverse temperature
             initial_state (dict): initial state
             updater(str): updater algorithm
@@ -218,11 +239,17 @@ class SASampler(BaseSampler):
 
         ising_graph, offset = model.get_cxxjij_ising_graph()
 
+        # Set default num_threads if not specified
+        if num_threads is None:
+            effective_num_reads = self._params.get("num_reads", 1) if num_reads is None else num_reads
+            num_threads = self._get_default_num_threads(effective_num_reads)
+
         self._set_params(
             beta_min=beta_min,
             beta_max=beta_max,
             num_sweeps=num_sweeps,
             num_reads=num_reads,
+            num_threads=num_threads,
             schedule=schedule,
         )
 
@@ -315,18 +342,64 @@ class SASampler(BaseSampler):
         _updater_name = updater.lower().replace("_", "").replace(" ", "")
         if _updater_name not in self._make_system:
             raise ValueError('updater is one of "single spin flip or swendsen wang"')
-        algorithm = self._algorithm[_updater_name]
-        sa_system = self._make_system[_updater_name](
-            _generate_init_state(), ising_graph
-        )
-        # ------------------------------------------- choose updater
-        response = self._cxxjij_sampling(
-            model, _generate_init_state, algorithm, sa_system, reinitialize_state, seed
-        )
+        
+        # Check if we can use the new make_sa_sampler approach
+        if initial_state is None and _updater_name != "swendsenwang":
+            # Convert BQM to Polynomial format
+            polynomial = {}
+            
+            # Convert linear terms
+            for var, coeff in model.linear.items():
+                polynomial[(var,)] = coeff
+            
+            # Convert quadratic terms
+            for (i, j), coeff in model.quadratic.items():
+                polynomial[(i, j)] = coeff
+            
+            # Add offset if non-zero
+            if model.offset != 0:
+                polynomial[()] = model.offset
+            
+            # No need to create polynomial model here as base_sample_hubo handles it
+            
+            # Convert updater name for new API
+            updater_map = {
+                "singlespinflip": "METROPOLIS",
+                "singlespinflippolynomial": "METROPOLIS"
+            }
+            new_updater = updater_map.get(_updater_name, "METROPOLIS")
+            
+            # Use base_sample_hubo for the actual sampling
+            response = base_sample_hubo(
+                hubo=polynomial,
+                vartype=model.vartype,
+                num_sweeps=self._params["num_sweeps"],
+                num_reads=self._params["num_reads"],
+                num_threads=self._params.get("num_threads", 1),
+                beta_min=self._params["beta_min"],
+                beta_max=self._params["beta_max"],
+                update_method=new_updater,
+                random_number_engine="XORSHIFT",
+                seed=seed,
+                temperature_schedule="GEOMETRIC" if self._params["schedule"] is None else "LINEAR"
+            )
+            
+            response.info["schedule"] = self.schedule_info
+            return response
+        else:
+            # Use the existing approach
+            algorithm = self._algorithm[_updater_name]
+            sa_system = self._make_system[_updater_name](
+                _generate_init_state(), ising_graph
+            )
+            # ------------------------------------------- choose updater
+            response = self._cxxjij_sampling(
+                model, _generate_init_state, algorithm, sa_system, reinitialize_state, seed
+            )
 
-        response.info["schedule"] = self.schedule_info
+            response.info["schedule"] = self.schedule_info
 
-        return response
+            return response
     
     def _sample_hubo_old(
         self,
