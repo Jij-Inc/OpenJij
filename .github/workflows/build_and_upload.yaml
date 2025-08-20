@@ -152,7 +152,7 @@ jobs:
         with:
             install: true
       - name: Build wheels on ${{matrix.arch}}
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.1.4
         env:
           CIBW_BUILD: ${{matrix.CIBW_BUILD}}
           CIBW_ENVIRONMENT: ""
@@ -193,7 +193,7 @@ jobs:
           set -eux
           brew install eigen nlohmann-json libomp
       - name: Build wheels on macos x86_64
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.1.4
         env:
           CIBW_SKIP: "pp*"
           CIBW_PLATFORM: macos
@@ -225,7 +225,7 @@ jobs:
           set -eux
           brew install eigen nlohmann-json libomp
       - name: Build wheels on macos arm64
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.1.4
         env:
           CIBW_SKIP: "pp*"
           CIBW_PLATFORM: macos
@@ -266,7 +266,7 @@ jobs:
           vcpkg --triplet x64-windows install nlohmann-json
           vcpkg integrate install
       - name: Build wheels on ${{ matrix.CIBW_PLATFORM }} ${{matrix.arch}}
-        uses: pypa/cibuildwheel@v2.22.0
+        uses: pypa/cibuildwheel@v3.1.4
         env:
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
