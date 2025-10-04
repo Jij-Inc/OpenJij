@@ -114,21 +114,13 @@ TEST(IntegerPolynomialModelTest, BasicFunctionality) {
   EXPECT_EQ(index_to_interactions[4][0].first, 1);
   EXPECT_EQ(index_to_interactions[4][0].second, 2);
 
-  const auto &only_multilinear_set = model.GetOnlyMultilinearIndexSet();
-  EXPECT_EQ(only_multilinear_set.size(), 2);
-  EXPECT_EQ(only_multilinear_set.count(0), 0);
-  EXPECT_EQ(only_multilinear_set.count(1), 0);
-  EXPECT_EQ(only_multilinear_set.count(2), 1);
-  EXPECT_EQ(only_multilinear_set.count(3), 1);
-  EXPECT_EQ(only_multilinear_set.count(4), 0);
-
-  const auto &under_quadratic_set = model.GetUnderQuadraticIndexSet();
-  EXPECT_EQ(under_quadratic_set.size(), 4);
-  EXPECT_EQ(under_quadratic_set.count(1), 1);
-  EXPECT_EQ(under_quadratic_set.count(2), 1);
-  EXPECT_EQ(under_quadratic_set.count(3), 1);
-  EXPECT_EQ(under_quadratic_set.count(4), 1);
-  EXPECT_EQ(under_quadratic_set.count(0), 0);
+  const auto &each_variable_degree = model.GetEachVariableDegree();
+  EXPECT_EQ(each_variable_degree.size(), 5);
+  EXPECT_EQ(each_variable_degree.at(0), 3);
+  EXPECT_EQ(each_variable_degree.at(1), 2);
+  EXPECT_EQ(each_variable_degree.at(2), 1);
+  EXPECT_EQ(each_variable_degree.at(3), 1);
+  EXPECT_EQ(each_variable_degree.at(4), 2);
 
   const auto [max_coeff, min_coeff] = model.GetMaxMinTerms();
   EXPECT_DOUBLE_EQ(max_coeff, 18.0);

@@ -83,29 +83,19 @@ public:
       std::sort(interactions.begin(), interactions.end());
     }
 
-    // Create only_multilinear_index_set and under_quadratic_index_set
+    // Create max degree of each variable
+    this->max_variable_degree_.resize(this->num_variables_, 0);
     for (std::int64_t index = 0; index < this->num_variables_; ++index) {
-      bool is_multilinear = true;
+      std::int64_t max_degree = 0;
       for (const auto &[_, degree] : this->index_to_interactions_[index]) {
-        if (degree != 1) {
-          is_multilinear = false;
-          break;
+        if (degree > max_degree) {
+          max_degree = degree;
         }
       }
-      if (is_multilinear) {
-        this->only_multilinear_index_set_.insert(index);
+      if (max_degree == 0) {
+        throw std::runtime_error("Variable with no interactions found.");
       }
-
-      bool is_under_quadratic = true;
-      for (const auto &[_, degree] : this->index_to_interactions_[index]) {
-        if (degree > 2) {
-          is_under_quadratic = false;
-          break;
-        }
-      }
-      if (is_under_quadratic) {
-        this->under_quadratic_index_set_.insert(index);
-      }
+      this->max_variable_degree_[index] = max_degree;
     }
   }
 
@@ -182,11 +172,11 @@ public:
   GetIndexToInteractions() const {
     return this->index_to_interactions_;
   }
-  const std::unordered_set<std::int64_t> &GetOnlyMultilinearIndexSet() const {
-    return this->only_multilinear_index_set_;
+  std::int64_t GetEachVariableDegreeAt(const std::int64_t index) const {
+    return this->max_variable_degree_[index];
   }
-  const std::unordered_set<std::int64_t> &GetUnderQuadraticIndexSet() const {
-    return this->under_quadratic_index_set_;
+  const std::vector<std::int64_t> &GetEachVariableDegree() const {
+    return this->max_variable_degree_;
   }
 
 private:
@@ -199,8 +189,7 @@ private:
       key_value_list_;
   std::vector<std::vector<std::pair<std::size_t, std::int64_t>>>
       index_to_interactions_;
-  std::unordered_set<std::int64_t> only_multilinear_index_set_;
-  std::unordered_set<std::int64_t> under_quadratic_index_set_;
+  std::vector<std::int64_t> max_variable_degree_;
 };
 
 } // namespace graph

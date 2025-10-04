@@ -972,8 +972,7 @@ void declare_IntegerPolynomialModel(py::module &m) {
    py_class.def("get_constant", &IPM::GetConstant);
    py_class.def("get_key_value_list", &IPM::GetKeyValueList);
    py_class.def("get_index_to_interactions", &IPM::GetIndexToInteractions);
-   py_class.def("get_only_multilinear_index_set", &IPM::GetOnlyMultilinearIndexSet);
-   py_class.def("get_under_quadratic_index_set", &IPM::GetUnderQuadraticIndexSet);
+   py_class.def("get_each_variable_degree", &IPM::GetEachVariableDegree);
 }
 
 void declare_IntegerSAResult(py::module &m) {

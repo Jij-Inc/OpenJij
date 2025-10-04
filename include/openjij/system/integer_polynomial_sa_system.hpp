@@ -282,11 +282,11 @@ public:
   double GetEnergy() const { return this->energy_; }
 
   bool OnlyMultiLinearCoeff(std::int64_t index) const {
-    return this->model.GetOnlyMultilinearIndexSet().count(index) > 0;
+    return this->model.GetEachVariableDegreeAt(index) == 1;
   }
 
   bool UnderQuadraticCoeff(std::int64_t index) const {
-    return this->model.GetUnderQuadraticIndexSet().count(index) > 0;
+    return (this->model.GetEachVariableDegreeAt(index) == 2) || (this->model.GetEachVariableDegreeAt(index) == 1);
   }
 
 public:
