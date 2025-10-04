@@ -15,6 +15,7 @@
 #pragma once
 
 #include "../utility/variable.hpp"
+#include "../utility/min_polynomial.hpp"
 #include "./sa_system.hpp"
 #include <cstdint>
 #include <random>
@@ -186,64 +187,69 @@ public:
   }
 
   std::pair<int, double> GetMinEnergyDifference(std::int64_t index) {
-    if (this->UnderQuadraticCoeff(index)) {
-      const auto &x = this->state_[index];
-      const std::int64_t dxl = x.lower_bound - x.value;
-      const std::int64_t dxu = x.upper_bound - x.value;
+    const auto &x = this->state_[index];
+    const std::int64_t dxl = x.lower_bound - x.value;
+    const std::int64_t dxu = x.upper_bound - x.value;
 
+    if (this->UnderQuadraticCoeff(index)) {
       auto it_a = this->base_energy_difference_[index].find(2);
       const double a = (it_a != this->base_energy_difference_[index].end())
                            ? it_a->second
                            : 0.0;
-
       auto it_b = this->base_energy_difference_[index].find(1);
-      const double b_base = (it_b != this->base_energy_difference_[index].end())
+      const double b = (it_b != this->base_energy_difference_[index].end())
                                 ? it_b->second
                                 : 0.0;
-      const double b = b_base + 2 * x.value * a;
 
-      if (a > 0) {
-        const double center = -b / (2 * a);
-        if (dxu <= center) {
-          return {x.upper_bound,
-                  this->GetEnergyDifference(index, x.upper_bound)};
-        } else if (dxl < center && center < dxu) {
-          const std::int64_t dx_left =
-              static_cast<std::int64_t>(std::floor(center));
-          const std::int64_t dx_right =
-              static_cast<std::int64_t>(std::ceil(center));
-          if (center - dx_left <= dx_right - center) {
-            return {x.value + dx_left,
-                    this->GetEnergyDifference(index, x.value + dx_left)};
-          } else {
-            return {x.value + dx_right,
-                    this->GetEnergyDifference(index, x.value + dx_right)};
-          }
-        } else if (dxl >= center) {
-          return {x.lower_bound,
-                  this->GetEnergyDifference(index, x.lower_bound)};
-        } else {
-          throw std::runtime_error("Invalid state in GetMinEnergyDifference");
-        }
-      } else if (a == 0) {
-        if (b > 0) {
-          return {x.lower_bound,
-                  this->GetEnergyDifference(index, x.lower_bound)};
-        } else if (b < 0) {
-          return {x.upper_bound,
-                  this->GetEnergyDifference(index, x.upper_bound)};
-        } else {
-          return {x.GenerateRandomValue(this->random_number_engine), 0.0};
-        }
-      } else { // a < 0
-        const double dE_lower = this->GetEnergyDifference(index, x.lower_bound);
-        const double dE_upper = this->GetEnergyDifference(index, x.upper_bound);
-        if (dE_lower <= dE_upper) {
-          return {x.lower_bound, dE_lower};
-        } else {
-          return {x.upper_bound, dE_upper};
-        }
-      }
+      const double aa = a;
+      const double bb = b + 2 * x.value * a;
+
+      return utility::FindMinimumIntegerQuadratic(aa, bb, dxl, dxu, x.value);
+    }
+    else if (this->IsCubicCoeff(index)) {
+      auto it_a = this->base_energy_difference_[index].find(3);
+      const double a = (it_a != this->base_energy_difference_[index].end())
+                           ? it_a->second
+                           : 0.0;
+      auto it_b = this->base_energy_difference_[index].find(2);
+      const double b = (it_b != this->base_energy_difference_[index].end())
+                                ? it_b->second
+                                : 0.0;
+      auto it_c = this->base_energy_difference_[index].find(1);
+      const double c = (it_c != this->base_energy_difference_[index].end())
+                                ? it_c->second
+                                : 0.0;
+
+      const double aa = a;
+      const double bb = 3 * a * x.value + b;
+      const double cc = 3 * a * x.value * x.value + 2 * b * x.value + c;
+
+      return utility::FindMinimumIntegerCubic(aa, bb, cc, dxl, dxu, x.value);
+    } else if (this->IsQuarticCoeff(index)) {
+      auto it_a = this->base_energy_difference_[index].find(4);
+      const double a = (it_a != this->base_energy_difference_[index].end())
+                           ? it_a->second
+                           : 0.0;
+      auto it_b = this->base_energy_difference_[index].find(3);
+      const double b = (it_b != this->base_energy_difference_[index].end())
+                                ? it_b->second
+                                : 0.0;
+      auto it_c = this->base_energy_difference_[index].find(2);
+      const double c = (it_c != this->base_energy_difference_[index].end())
+                                ? it_c->second
+                                : 0.0;
+      auto it_d = this->base_energy_difference_[index].find(1);
+      const double d = (it_d != this->base_energy_difference_[index].end())
+                                ? it_d->second
+                                : 0.0;
+
+      const double aa = a;
+      const double bb = 4 * a * x.value + b;
+      const double cc = 6 * a * x.value * x.value + 3 * b * x.value + c;
+      const double dd = 4 * a * x.value * x.value * x.value +
+                        3 * b * x.value * x.value + 2 * c * x.value + d;
+                        
+      return utility::FindMinimumIntegerQuartic(aa, bb, cc, dd, dxl, dxu, x.value);
     } else {
       double min_dE = std::numeric_limits<double>::infinity();
       std::int64_t min_value = -1;
@@ -281,12 +287,24 @@ public:
 
   double GetEnergy() const { return this->energy_; }
 
-  bool OnlyMultiLinearCoeff(std::int64_t index) const {
+  bool IsLinearCoeff(std::int64_t index) const {
     return this->model.GetEachVariableDegreeAt(index) == 1;
   }
 
   bool UnderQuadraticCoeff(std::int64_t index) const {
     return (this->model.GetEachVariableDegreeAt(index) == 2) || (this->model.GetEachVariableDegreeAt(index) == 1);
+  }
+
+  bool IsCubicCoeff(std::int64_t index) const {
+    return this->model.GetEachVariableDegreeAt(index) == 3;
+  }
+
+  bool IsQuarticCoeff(std::int64_t index) const {
+    return this->model.GetEachVariableDegreeAt(index) == 4;
+  }
+
+  bool CanOptMove(std::int64_t index) const {
+    return this->UnderQuadraticCoeff(index) || this->IsCubicCoeff(index) || this->IsQuarticCoeff(index);
   }
 
 public:
