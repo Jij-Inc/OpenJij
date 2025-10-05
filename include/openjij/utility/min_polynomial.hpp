@@ -6,7 +6,7 @@
 namespace openjij {
 namespace utility {
 
-const double ZERO_TOL = 1e-12;
+const double ZERO_TOL = 1e-13;
 
 template <typename RandomNumberEngine>
 std::pair<std::int64_t, double>
