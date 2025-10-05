@@ -6,18 +6,25 @@
 namespace openjij {
 namespace utility {
 
+const double ZERO_TOL = 1e-12;
+
+template <typename RandomNumberEngine>
 std::pair<std::int64_t, double>
 FindMinimumIntegerQuadratic(
   const double a,
   const double b,
   const std::int64_t l,
   const std::int64_t u,
-  const std::int64_t x
+  const std::int64_t x,
+  RandomNumberEngine &random_number_engine
 ) {
+  if ((std::abs(a) < ZERO_TOL) && (std::abs(b) < ZERO_TOL)) {
+    return {x + std::uniform_int_distribution<std::int64_t>(l, u)(random_number_engine), 0.0};
+  }
+
   if (a > 0) {
-    const double center = -b / (2.0 * a);
-    const auto rounded_center = static_cast<std::int64_t>(std::round(center));
-    const std::int64_t dx = std::clamp(rounded_center, l, u);
+    const auto clamped_center = std::clamp(-b / (2.0 * a), static_cast<double>(l), static_cast<double>(u));
+    const auto dx = static_cast<std::int64_t>(std::round(clamped_center));
     const double energy_diff = a * dx * dx + b * dx;
     return {x + dx, energy_diff};
   } else {
@@ -31,6 +38,7 @@ FindMinimumIntegerQuadratic(
   }
 }
 
+template <typename RandomNumberEngine>
 std::pair<std::int64_t, double>
 FindMinimumIntegerCubic(
   const double a,
@@ -38,8 +46,13 @@ FindMinimumIntegerCubic(
   const double c,
   const std::int64_t l,
   const std::int64_t u,
-  const std::int64_t x
+  const std::int64_t x,
+  RandomNumberEngine &random_number_engine
 ) {
+  if (std::abs(a) < ZERO_TOL && std::abs(b) < ZERO_TOL && std::abs(c) < ZERO_TOL) {
+    return {x + std::uniform_int_distribution<std::int64_t>(l, u)(random_number_engine), 0.0};
+  }
+
   const double val_l = a * l * l * l + b * l * l + c * l;
   const double val_u = a * u * u * u + b * u * u + c * u;
 
@@ -54,7 +67,7 @@ FindMinimumIntegerCubic(
     min_val = val_u;
   }
 
-  if (a != 0) {
+  if (std::abs(a) >= ZERO_TOL) {
     const double delta = b * b - 3 * a * c;
     if (delta >= 0) {
       const double sqrt_delta = std::sqrt(delta);
@@ -81,7 +94,7 @@ FindMinimumIntegerCubic(
         }
       }
     }
-  } else if (b != 0) {
+  } else if (std::abs(b) >= ZERO_TOL) {
     const double vertex = -c / (2 * b);
     if (l < vertex && vertex < u) {
       const auto cand1 = static_cast<std::int64_t>(std::floor(vertex));
@@ -105,6 +118,7 @@ FindMinimumIntegerCubic(
   return {x + best_dx, min_val};
 }
 
+template <typename RandomNumberEngine>
 std::pair<std::int64_t, double>
 FindMinimumIntegerQuartic(
   const double a,
@@ -113,8 +127,14 @@ FindMinimumIntegerQuartic(
   const double d,
   const std::int64_t l,
   const std::int64_t u,
-  const std::int64_t x
+  const std::int64_t x,
+  RandomNumberEngine &random_number_engine
 ) {
+
+  if (std::abs(a) < ZERO_TOL && std::abs(b) < ZERO_TOL && std::abs(c) < ZERO_TOL && std::abs(d) < ZERO_TOL) {
+    return {x + std::uniform_int_distribution<std::int64_t>(l, u)(random_number_engine), 0.0};
+  }
+
   const auto f = [&](double dx) {
     return a * dx * dx * dx * dx + b * dx * dx * dx + c * dx * dx + d * dx;
   };
@@ -139,7 +159,7 @@ FindMinimumIntegerQuartic(
   const double C = 2.0 * c;
   const double D = d;
 
-  if (A != 0) {
+  if (std::abs(A) >= ZERO_TOL) {
     const double p = (3.0 * A * C - B * B) / (3.0 * A * A);
     const double q = (2.0 * B * B * B - 9.0 * A * B * C + 27.0 * A * A * D) / (27.0 * A * A * A);
 
@@ -199,7 +219,7 @@ FindMinimumIntegerQuartic(
       best_dx = result3.first;
       min_val = result3.second;
     }
-  } else if (B != 0) {
+  } else if (std::abs(B) >= ZERO_TOL) {
     const double delta = C * C - 4.0 * B * D;
     if (delta >= 0) {
       const double sqrt_delta = std::sqrt(delta);
@@ -222,7 +242,7 @@ FindMinimumIntegerQuartic(
         }
       }
     }
-  } else if (C != 0) {
+  } else if (std::abs(C) >= ZERO_TOL) {
     const double r = -D / C;
     const double f_double_prime = 2.0 * c;
     if (f_double_prime > 0 && l < r && r < u) {

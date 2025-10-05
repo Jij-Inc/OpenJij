@@ -204,7 +204,7 @@ public:
       const double aa = a;
       const double bb = b + 2 * x.value * a;
 
-      return utility::FindMinimumIntegerQuadratic(aa, bb, dxl, dxu, x.value);
+      return utility::FindMinimumIntegerQuadratic(aa, bb, dxl, dxu, x.value, this->random_number_engine);
     }
     else if (this->IsCubicCoeff(index)) {
       auto it_a = this->base_energy_difference_[index].find(3);
@@ -224,7 +224,7 @@ public:
       const double bb = 3 * a * x.value + b;
       const double cc = 3 * a * x.value * x.value + 2 * b * x.value + c;
 
-      return utility::FindMinimumIntegerCubic(aa, bb, cc, dxl, dxu, x.value);
+      return utility::FindMinimumIntegerCubic(aa, bb, cc, dxl, dxu, x.value, this->random_number_engine);
     } else if (this->IsQuarticCoeff(index)) {
       auto it_a = this->base_energy_difference_[index].find(4);
       const double a = (it_a != this->base_energy_difference_[index].end())
@@ -249,7 +249,7 @@ public:
       const double dd = 4 * a * x.value * x.value * x.value +
                         3 * b * x.value * x.value + 2 * c * x.value + d;
                         
-      return utility::FindMinimumIntegerQuartic(aa, bb, cc, dd, dxl, dxu, x.value);
+      return utility::FindMinimumIntegerQuartic(aa, bb, cc, dd, dxl, dxu, x.value, this->random_number_engine);
     } else {
       double min_dE = std::numeric_limits<double>::infinity();
       std::int64_t min_value = -1;
