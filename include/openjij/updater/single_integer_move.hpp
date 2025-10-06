@@ -39,7 +39,7 @@ struct OptMetropolisUpdater {
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double progress) {
     // Metropolis Optimal Transition if possible
-    // This is used for systems with upto 4th power coefficientsa
+    // This is used for systems with up to 4th power coefficients
     if (sa_system.CanOptMove(index) && dist(sa_system.random_number_engine) < progress) {
       const auto [min_val, min_dE] = sa_system.GetMinEnergyDifference(index);
       if (min_dE <= 0.0 ||
