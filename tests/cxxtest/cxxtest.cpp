@@ -37,6 +37,7 @@
 #include <openjij/utility/schedule_list.hpp>
 #include <openjij/utility/union_find.hpp>
 #include <openjij/utility/random.hpp>
+#include <openjij/utility/min_polynomial.hpp>
 #include <openjij/utility/gpu/memory.hpp>
 #include <openjij/utility/gpu/cublas.hpp>
 #include <openjij/sampler/sa_sampler.hpp>
