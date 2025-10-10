@@ -20,6 +20,7 @@ endif()
 
 FetchContent_GetProperties(googletest)
 
+find_package(GTest)
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")
