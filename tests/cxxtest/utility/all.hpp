@@ -17,3 +17,4 @@
 #include "eigen.hpp"
 #include "union_find.hpp"
 #include "gpu.hpp"
+#include "min_polynomial.hpp"
