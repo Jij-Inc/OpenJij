@@ -1,19 +1,19 @@
 name: Python Test
 
-on: 
+on:
   workflow_dispatch:
   push:
-    branches: 
+    branches:
       - main
-  pull_request: 
-    types: 
-     - opened
-     - reopened
-     - synchronize
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 concurrency:
-      group: WORKFLOW-PYTHON-TEST-${{ github.head_ref || github.run_id }}
-      cancel-in-progress: false
+  group: WORKFLOW-PYTHON-TEST-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   Python:
@@ -25,99 +25,86 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     concurrency:
       group: PYTHON-TEST-${{ github.head_ref || github.run_id }}-${{ matrix.os }}-${{ matrix.python-version }}
       cancel-in-progress: false
     steps:
-    - uses: actions/checkout@v4
-    - name: Install uv and set Python version
-      uses: astral-sh/setup-uv@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Get Python Version
-      shell: bash
-      run: |
+      - uses: actions/checkout@v4
+      - name: Install uv and set Python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Get Python Version
+        shell: bash
+        run: |
           set -eux
           python --version > python_version.txt
           cat python_version.txt
-    - name: Install Dependencies
-      shell: bash
-      run: |
+      - name: Install Dependencies
+        shell: bash
+        run: |
           set -eux
-          uv sync --locked --group test    
-    - name: Install Eigen3 on linux
-      if: ${{ matrix.os == 'ubuntu-latest'}}
-      run: |
-        sudo apt-get install -y libeigen3-dev
-        sudo apt-get install -y libopenblas-dev 
-    - name: Install Eigen3 on macos
-      if: ${{ matrix.os == 'macos-latest'}}
-      run: |
-        brew install eigen nlohmann-json libomp
-    - name: Add msbuild to PATH
-      if: ${{ matrix.os == 'windows-latest'}}
-      uses: microsoft/setup-msbuild@v2.0.0
-    - name: Install Eigen on windows
-      if: ${{ matrix.os == 'windows-latest'}}
-      shell: bash 
-      run: |
-        vcpkg --triplet x64-windows-static install eigen3
-        vcpkg --triplet x64-windows install eigen3
-        vcpkg --triplet x64-windows-static install nlohmann-json
-        vcpkg --triplet x64-windows install nlohmann-json
-        vcpkg integrate install
-    - name: Build Debug Configure
-      if: ${{ github.event_name == 'workflow_dispatch' && matrix.os == 'ubuntu-latest' }}
-      shell: bash
-      run: |
-        set -eux
-        mkdir build
-        cmake -DCMAKE_BUILD_TYPE=Debug -DSKBUILD=TRUE  -S . -B build
-    - name: Build Debug Build
-      if: ${{ github.event_name == 'workflow_dispatch' && matrix.os == 'ubuntu-latest' }}
-      shell: bash
-      run: |    
-        set -eux
-        cmake --build build
-    - name: Build & Install    
-      if: ${{ matrix.os == 'ubuntu-latest'}}
-      shell: bash
-      run: |
-        set -eux
-        export CMAKE_BUILD_TYPE=Debug
-        uv pip install -vvv . 
-    - name: Build & Install    
-      if: ${{ matrix.os == 'macos-latest'}}
-      shell: bash
-      run: |
-        set -eux
-        export CIBUILDWHEEL=1
-        export CMAKE_BUILD_TYPE=Debug
-        uv pip install -vvv . 
-    - name: Build & Install    
-      if: ${{ matrix.os == 'windows-latest'}}
-      shell: bash 
-      run: |
-        set -eux
-        export CMAKE_BUILD_TYPE=Debug
-        export CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
-        uv pip install -vvv .
-    - name: Test 
-      shell: bash
-      run: |
-        set -eux
-        uv run pytest tests/ -v --cov=openjij
-    - name: Generate
-      shell: bash
-      run: |
+          uv sync --locked --group test
+      - name: Install Eigen3 on linux
+        if: ${{ matrix.os == 'ubuntu-latest'}}
+        run: |
+          sudo apt-get install -y libeigen3-dev
+          sudo apt-get install -y libopenblas-dev
+      - name: Install Eigen3 on macos
+        if: ${{ matrix.os == 'macos-latest'}}
+        run: |
+          brew install eigen nlohmann-json libomp
+      - name: Add msbuild to PATH
+        if: ${{ matrix.os == 'windows-latest'}}
+        uses: microsoft/setup-msbuild@v2.0.0
+      - name: Install Eigen on windows
+        if: ${{ matrix.os == 'windows-latest'}}
+        shell: bash
+        run: |
+          vcpkg --triplet x64-windows-static install eigen3
+          vcpkg --triplet x64-windows install eigen3
+          vcpkg --triplet x64-windows-static install nlohmann-json
+          vcpkg --triplet x64-windows install nlohmann-json
+          vcpkg integrate install
+      - name: Build & Install
+        if: ${{ matrix.os == 'ubuntu-latest'}}
+        shell: bash
+        run: |
+          set -eux
+          export CMAKE_BUILD_TYPE=Debug
+          uv pip install -vvv .
+      - name: Build & Install
+        if: ${{ matrix.os == 'macos-latest'}}
+        shell: bash
+        run: |
+          set -eux
+          export CIBUILDWHEEL=1
+          export CMAKE_BUILD_TYPE=Debug
+          uv pip install -vvv .
+      - name: Build & Install
+        if: ${{ matrix.os == 'windows-latest'}}
+        shell: bash
+        run: |
+          set -eux
+          export CMAKE_BUILD_TYPE=Debug
+          export CMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          uv pip install -vvv .
+      - name: Test
+        shell: bash
+        run: |
+          set -eux
+          uv run pytest tests/ -v --cov=openjij
+      - name: Generate
+        shell: bash
+        run: |
           set -eux
           uv run python -m coverage xml
           uv run python -m coverage json
           uv run python -m coverage lcov
-    - uses: codecov/codecov-action@v5
-      continue-on-error: true
-      with:
+      - uses: codecov/codecov-action@v5
+        continue-on-error: true
+        with:
           token: ${{ secrets.CODECOV_TOKEN }}
           env_vars: OS,PYTHON
           name: "Openjij"
