@@ -252,7 +252,6 @@ jobs:
       - name: Install Dependency
         shell: powershell
         run: |
-          set -eux 
           vcpkg update
           vcpkg --triplet x64-windows-static install eigen3
           vcpkg --triplet x64-windows install eigen3
