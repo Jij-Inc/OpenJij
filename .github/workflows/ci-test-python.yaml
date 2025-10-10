@@ -27,17 +27,6 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Get Python Version
-        shell: bash
-        run: |
-          set -eux
-          python --version > python_version.txt
-          cat python_version.txt
-      - name: Install Dependencies
-        shell: bash
-        run: |
-          set -eux
-          uv sync --locked --group test
       - name: Install Eigen3 on linux
         if: ${{ matrix.os == 'ubuntu-latest'}}
         run: |
@@ -52,26 +41,18 @@ jobs:
         uses: microsoft/setup-msbuild@v2.0.0
       - name: Install Eigen on windows
         if: ${{ matrix.os == 'windows-latest'}}
-        shell: bash
+        shell: powershell
         run: |
           vcpkg --triplet x64-windows-static install eigen3
           vcpkg --triplet x64-windows install eigen3
           vcpkg --triplet x64-windows-static install nlohmann-json
           vcpkg --triplet x64-windows install nlohmann-json
           vcpkg integrate install
-      - name: Build Debug Configure
-        if: ${{ github.event_name == 'workflow_dispatch' && matrix.os == 'ubuntu-latest' }}
+      - name: Install Dependencies
         shell: bash
         run: |
           set -eux
-          mkdir build
-          cmake -DCMAKE_BUILD_TYPE=Debug -DSKBUILD=TRUE  -S . -B build
-      - name: Build Debug Build
-        if: ${{ github.event_name == 'workflow_dispatch' && matrix.os == 'ubuntu-latest' }}
-        shell: bash
-        run: |
-          set -eux
-          cmake --build build
+          uv sync --locked --group test
       - name: Build & Install
         if: ${{ matrix.os == 'ubuntu-latest'}}
         shell: bash
