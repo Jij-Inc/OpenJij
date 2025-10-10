@@ -5,24 +5,24 @@ on:
   release:
     types: [published]
   push:
-    branches: 
+    branches:
       - main
 
 concurrency:
-      group: Buid-Documentation
-      cancel-in-progress: false
+  group: Buid-Documentation
+  cancel-in-progress: false
 
 env:
-  Python_Version: '3.12'
+  Python_Version: "3.12"
 
 jobs:
   build_docs:
-    name: Build Documentation 
+    name: Build Documentation
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install uv and set Python version
         uses: astral-sh/setup-uv@v6
         with:
@@ -33,11 +33,12 @@ jobs:
           set -eux
           uv sync --locked --group build
       - name: Install Dep
-        run: | 
-         uv pip install typing-extensions
-         sudo apt-get install -y libeigen3-dev lcov graphviz mscgen dia pdf2svg astyle
-         sudo apt-get install -y doxygen doxygen-doxyparse fonts-liberation python3-breathe
-      - name: Prepare 
+        run: |
+          uv pip install typing-extensions
+          sudo apt-get update
+          sudo apt-get install -y libeigen3-dev lcov graphviz mscgen dia pdf2svg astyle
+          sudo apt-get install -y doxygen doxygen-doxyparse fonts-liberation python3-breathe
+      - name: Prepare
         shell: bash
         run: mkdir build
       - name: CMake Configure
@@ -72,17 +73,16 @@ jobs:
         #if: ${{github.event_name == 'release'}}
         uses: peaceiris/actions-gh-pages@v4
         with:
-         personal_token: ${{ secrets.OPENJIJ_WEB }}
-         keep_files: true
-         allow_empty_commit: true
-         publish_dir: ./public
-         publish_branch: main
-         external_repository: Jij-Inc/OpenJij-Reference-Page
-         destination_dir: www
-         user_name: 'github-actions[bot]'
-         user_email: 'github-actions[bot]@users.noreply.github.com'
-         commit_message: ${{ github.event.head_commit.message }}
-         full_commit_message: ${{ github.event.head_commit.message }}
-         tag_name: ${{ steps.prepare_tag.outputs.deploy_tag_name }}
-         tag_message: 'Deployment ${{ steps.prepare_tag.outputs.tag_name }}'
-         
+          personal_token: ${{ secrets.OPENJIJ_WEB }}
+          keep_files: true
+          allow_empty_commit: true
+          publish_dir: ./public
+          publish_branch: main
+          external_repository: Jij-Inc/OpenJij-Reference-Page
+          destination_dir: www
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: ${{ github.event.head_commit.message }}
+          full_commit_message: ${{ github.event.head_commit.message }}
+          tag_name: ${{ steps.prepare_tag.outputs.deploy_tag_name }}
+          tag_message: "Deployment ${{ steps.prepare_tag.outputs.tag_name }}"
