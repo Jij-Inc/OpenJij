@@ -31,13 +31,18 @@ endif()
 
 #### Eigen ####
 FetchContent_Declare(
-    eigen3
+    eigen
     GIT_REPOSITORY  https://gitlab.com/libeigen/eigen
-    GIT_TAG         3.4.0
+    GIT_TAG         3.4.1
     GIT_SHALLOW     TRUE
     )
 
-FetchContent_MakeAvailable(eigen3)
+# Prevent Eigen from being installed by using FetchContent_Populate + add_subdirectory with EXCLUDE_FROM_ALL
+FetchContent_GetProperties(eigen)
+if(NOT eigen_POPULATED)
+    FetchContent_Populate(eigen)
+    add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 add_library(openjij-eigen_lib INTERFACE)
 target_include_directories(openjij-eigen_lib INTERFACE ${eigen_SOURCE_DIR})
