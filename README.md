@@ -24,6 +24,15 @@
 
 - [C++ Docs](https://jij-inc.github.io/OpenJij-Reference-Page/)
 
+## Citation
+Click the **"Cite this repository"** button on the right sidebar to get the citation for the latest version (BibTeX and APA formats).
+
+**DOI for all versions:**
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15790495.svg)](https://doi.org/10.5281/zenodo.15790495)
+
+**Note for Reproducibility:** Please cite the specific version you used in your work. You can find the version number by running `pip show openjij`.
+
+
 ## install
 
 ### install via pip
