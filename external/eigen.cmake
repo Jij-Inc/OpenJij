@@ -42,14 +42,14 @@ FetchContent_Declare(
     )
 
 # Prevent Eigen from being installed by using FetchContent_Populate + add_subdirectory with EXCLUDE_FROM_ALL
-FetchContent_GetProperties(eigen)
-if(NOT eigen_POPULATED)
-    FetchContent_Populate(eigen)
-    add_subdirectory(${eigen_SOURCE_DIR} ${eigen_BINARY_DIR} EXCLUDE_FROM_ALL)
+FetchContent_GetProperties(eigen3)
+if(NOT eigen3_POPULATED)
+    FetchContent_Populate(eigen3)
+    add_subdirectory(${eigen3_SOURCE_DIR} ${eigen3_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
 add_library(openjij-eigen_lib INTERFACE)
-target_include_directories(openjij-eigen_lib INTERFACE ${eigen_SOURCE_DIR})
+target_include_directories(openjij-eigen_lib INTERFACE ${eigen3_SOURCE_DIR})
 target_compile_definitions(openjij-eigen_lib INTERFACE 
     EIGEN_MPL2_ONLY
     BUILD_TESTING=OFF
