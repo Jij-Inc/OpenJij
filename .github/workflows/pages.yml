@@ -23,7 +23,7 @@ jobs:
       group: Deploy-Static-Content-Pages
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # Fetch all history for .GitInfo and .Lastmod
       - uses: actions/setup-python@v6
