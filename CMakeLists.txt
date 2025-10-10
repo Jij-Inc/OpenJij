@@ -18,6 +18,10 @@ project(openjij
     HOMEPAGE_URL "https://www.openjij.org"
 )
 
+# FetchContentとfind_packageの統合を有効化（CMake 3.24+）
+# FetchContentは常にfind_packageを試みてから、見つからない場合のみダウンロード
+set(FETCHCONTENT_TRY_FIND_PACKAGE_MODE ALWAYS CACHE STRING "Try find_package before fetching" FORCE)
+
 # Standard includes
 include(CheckLanguage)
 

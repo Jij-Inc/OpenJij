@@ -12,20 +12,18 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/google/googletest
     GIT_TAG         v1.17.0
     GIT_SHALLOW     TRUE
+    FIND_PACKAGE_ARGS NAMES GTest
+    EXCLUDE_FROM_ALL
 )
 
 if(WIN32)
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 endif()
 
-# Prevent googletest from being installed by using FetchContent_Populate + add_subdirectory with EXCLUDE_FROM_ALL
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-    FetchContent_Populate(googletest)
-    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-
-find_package(GTest)
+# FetchContent_MakeAvailableを使用（CMake 3.24+推奨）
+# FETCHCONTENT_TRY_FIND_PACKAGE_MODE=ALWAYSにより、
+# まずfind_package(GTest)を試み、見つからない場合のみダウンロード
+FetchContent_MakeAvailable(googletest)
 
 #FetchContent_GetProperties(googletest)
 
