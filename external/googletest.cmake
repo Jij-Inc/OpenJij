@@ -18,7 +18,7 @@ if(WIN32)
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 endif()
 
-FetchContent_GetProperties(googletest))
+FetchContent_GetProperties(googletest)
 
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
