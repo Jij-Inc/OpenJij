@@ -173,11 +173,11 @@ public:
 
   double GetEnergy() const { return this->energy_; }
 
-  bool OnlyMultiLinearCoeff(std::int64_t index) const {
+  bool IsLinearCoeff(std::int64_t index) const {
     return this->model.GetOnlyBilinearIndexSet().count(index) > 0;
   }
 
-  bool UnderQuadraticCoeff(std::int64_t index) const { return true; }
+  bool CanOptMove(std::int64_t index) const { return true; }
 
   double GetLinearCoeff(std::int64_t index) const {
     return this->linear_coeff_[index];

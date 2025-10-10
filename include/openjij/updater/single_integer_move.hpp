@@ -39,8 +39,8 @@ struct OptMetropolisUpdater {
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double progress) {
     // Metropolis Optimal Transition if possible
-    // This is used for systems with only quadratic coefficientsa
-    if (sa_system.UnderQuadraticCoeff(index) && dist(sa_system.random_number_engine) < progress) {
+    // This is used for systems with up to 4th power coefficients
+    if (sa_system.CanOptMove(index) && dist(sa_system.random_number_engine) < progress) {
       const auto [min_val, min_dE] = sa_system.GetMinEnergyDifference(index);
       if (min_dE <= 0.0 ||
           dist(sa_system.random_number_engine) < std::exp(-min_dE / T)) {
@@ -67,7 +67,7 @@ struct HeatBathUpdater {
   template <typename SystemType>
   std::int64_t GenerateNewValue(SystemType &sa_system, const std::int64_t index,
                                 const double T, const double _progress) {
-    if (sa_system.OnlyMultiLinearCoeff(index)) {
+    if (sa_system.IsLinearCoeff(index)) {
       return ForBilinear(sa_system, index, T, _progress);
     } else {
       return ForAll(sa_system, index, T, _progress);
