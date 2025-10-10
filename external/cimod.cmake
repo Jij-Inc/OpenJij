@@ -28,8 +28,12 @@ FetchContent_Declare(
     GIT_SHALLOW     TRUE
     )
 
-FetchContent_MakeAvailable(cimod)
-
+# Prevent Cimod from being installed by using FetchContent_Populate + add_subdirectory with EXCLUDE_FROM_ALL
+FetchContent_GetProperties(cimod)
+if(NOT cimod_POPULATED)
+    FetchContent_Populate(cimod)
+    add_subdirectory(${cimod_SOURCE_DIR} ${cimod_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")
