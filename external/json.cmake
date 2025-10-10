@@ -16,7 +16,12 @@ FetchContent_Declare(
      GIT_SHALLOW     TRUE
      )
      
-FetchContent_MakeAvailable(nlohmann_json)
+# Prevent nlohmann_json from being installed by using FetchContent_Populate + add_subdirectory with EXCLUDE_FROM_ALL
+FetchContent_GetProperties(nlohmann_json)
+if(NOT nlohmann_json_POPULATED)
+    FetchContent_Populate(nlohmann_json)
+    add_subdirectory(${nlohmann_json_SOURCE_DIR} ${nlohmann_json_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 # Since the git repository of nlohmann/json is huge, we store only a single-include file json.hpp in our project.
 #set(BUILD_TESTING OFF)
