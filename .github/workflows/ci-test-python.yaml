@@ -11,24 +11,16 @@ on:
       - reopened
       - synchronize
 
-concurrency:
-  group: WORKFLOW-PYTHON-TEST-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: false
-
 jobs:
   Python:
     if: ${{ !contains(github.head_ref, 'dependabot/github_actions')}}
     runs-on: ${{ matrix.os }}
     name: Python ${{ matrix.python-version }} Test on ${{ matrix.os }}
     strategy:
-      max-parallel: 3
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-    concurrency:
-      group: PYTHON-TEST-${{ github.head_ref || github.run_id }}-${{ matrix.os }}-${{ matrix.python-version }}
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v5
       - name: Install uv and set Python version
