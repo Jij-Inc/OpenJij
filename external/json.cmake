@@ -15,8 +15,8 @@ FetchContent_Declare(
      GIT_TAG         v3.12.0
      GIT_SHALLOW     TRUE
      )
-
-FetchContent_GetProperties(nlohmann_json)
+     
+FetchContent_MakeAvailable(nlohmann_json)
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")

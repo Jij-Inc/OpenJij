@@ -12,8 +12,7 @@ FetchContent_Declare(
     GIT_SHALLOW     TRUE
 )
 set(BUILD_TESTING OFF)
-
-FetchContent_GetProperties(pybind11_json)
+FetchContent_MakeAvailable(pybind11_json)
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")

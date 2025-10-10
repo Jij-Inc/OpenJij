@@ -28,7 +28,7 @@ FetchContent_Declare(
     GIT_SHALLOW     TRUE
     )
 
-FetchContent_GetProperties(cimod)
+FetchContent_MakeAvailable(cimod)
 
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)

@@ -15,11 +15,7 @@ set(EIGEN_DOC_USE_MATHJAX OFF CACHE BOOL "" FORCE)
 set(EIGEN_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(EIGEN_TEST_NOQT OFF CACHE BOOL "" FORCE)
 set(EIGEN_LEAVE_TEST_IN_ALL_TARGET OFF CACHE BOOL "" FORCE)
-
-
-# Disable installation of Eigen3 headers to prevent them from being included in the wheel
-set(EIGEN_INSTALL_HEADERS OFF CACHE BOOL "" FORCE)
-
+#set(EIGEN_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 if(MSVC)
   set(EIGEN_Fortran_COMPILER_WORKS OFF CACHE BOOL "" FORCE)
@@ -41,10 +37,10 @@ FetchContent_Declare(
     GIT_SHALLOW     TRUE
     )
 
-FetchContent_GetProperties(eigen3)
+FetchContent_MakeAvailable(eigen3)
 
 add_library(openjij-eigen_lib INTERFACE)
-target_include_directories(openjij-eigen_lib INTERFACE ${eigen3_SOURCE_DIR})
+target_include_directories(openjij-eigen_lib INTERFACE ${eigen_SOURCE_DIR})
 target_compile_definitions(openjij-eigen_lib INTERFACE 
     EIGEN_MPL2_ONLY
     BUILD_TESTING=OFF
