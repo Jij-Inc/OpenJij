@@ -35,17 +35,6 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Get Python Version
-        shell: bash
-        run: |
-          set -eux
-          python --version > python_version.txt
-          cat python_version.txt
-      - name: Install Dependencies
-        shell: bash
-        run: |
-          set -eux
-          uv sync --locked --group test
       - name: Install Eigen3 on linux
         if: ${{ matrix.os == 'ubuntu-latest'}}
         run: |
@@ -67,6 +56,11 @@ jobs:
           vcpkg --triplet x64-windows-static install nlohmann-json
           vcpkg --triplet x64-windows install nlohmann-json
           vcpkg integrate install
+       - name: Install Dependencies
+          shell: bash
+          run: |
+          set -eux
+          uv sync --locked --group test
       - name: Build & Install
         if: ${{ matrix.os == 'ubuntu-latest'}}
         shell: bash
