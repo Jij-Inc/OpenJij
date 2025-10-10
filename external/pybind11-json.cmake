@@ -12,7 +12,13 @@ FetchContent_Declare(
     GIT_SHALLOW     TRUE
 )
 set(BUILD_TESTING OFF)
-FetchContent_MakeAvailable(pybind11_json)
+
+# Prevent pybind11_json from being installed by using FetchContent_Populate + add_subdirectory with EXCLUDE_FROM_ALL
+FetchContent_GetProperties(pybind11_json)
+if(NOT pybind11_json_POPULATED)
+    FetchContent_Populate(pybind11_json)
+    add_subdirectory(${pybind11_json_SOURCE_DIR} ${pybind11_json_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)
 message(CHECK_PASS "fetched")

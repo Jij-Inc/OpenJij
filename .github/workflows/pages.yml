@@ -2,7 +2,7 @@
 name: Deploy static content to Pages
 
 env:
-  Python_Version: '3.11'
+  Python_Version: "3.11"
 
 on:
   release:
@@ -10,12 +10,12 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
   push:
-    branches: 
+    branches:
       - main
-  
+
 jobs:
   build_python_docs:
-    name: Build Python Documentation 
+    name: Build Python Documentation
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,10 +23,10 @@ jobs:
       group: Deploy-Static-Content-Pages
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
-      - uses: actions/setup-python@v5
+          fetch-depth: 0 # Fetch all history for .GitInfo and .Lastmod
+      - uses: actions/setup-python@v6
         name: Install Python
         with:
           python-version: ${{env.Python_Version}}
@@ -35,10 +35,10 @@ jobs:
           node-version: latest
       - name: Install via uv
         run: |
-         pip install uv
-         cd docs
-         uv sync
-      - name: Prepare 
+          pip install uv
+          cd docs
+          uv sync
+      - name: Prepare
         shell: bash
         run: |
           set -eux
@@ -51,7 +51,7 @@ jobs:
             echo "Error: GA4_TRACKING_ID is not set"
             exit 1
           fi
-      - name: Jupyter Book 
+      - name: Jupyter Book
         env:
           GA4_TRACKING_ID: ${{ secrets.GA4_TRACKING_ID }}
         run: |
@@ -60,8 +60,8 @@ jobs:
           # Using | as delimiter to avoid issues with / in the GA4 ID
           sed -i "s|GA4_TRACKING_ID|${GA4_TRACKING_ID}|g" en/_config.yml
           sed -i "s|GA4_TRACKING_ID|${GA4_TRACKING_ID}|g" ja/_config.yml
-          sh doc_build.sh 
-      - name: du -a 
+          sh doc_build.sh
+      - name: du -a
         shell: bash
         if: always()
         run: |
@@ -77,15 +77,15 @@ jobs:
         with:
           name: HTML
           path: ./docs/_build/html
-          retention-days: 30 
+          retention-days: 30
   # Single deploy job since we're just deploying
   deploy:
     needs: build_python_docs
     # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
     permissions:
-     contents: read
-     pages: write
-     id-token: write
+      contents: read
+      pages: write
+      id-token: write
     # Allow one concurrent deployment
     concurrency:
       group: "pages"
@@ -95,17 +95,17 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: HTML
           path: ./html
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           # Upload entire repository
-          path: './html'
+          path: "./html"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

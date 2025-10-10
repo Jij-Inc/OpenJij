@@ -16,7 +16,7 @@
 requires = [
     "scikit-build-core>=0.10",
     "setuptools_scm[toml]",
-    "pybind11>=2.12.0,<3",
+    "pybind11>=2.12.0",
     "oldest-supported-numpy",
 ]
 build-backend = "scikit_build_core.build"
@@ -116,34 +116,6 @@ console_output_style = "count"
 log_auto_indent = true
 junit_logging = "all"
 
-[tool.cibuildwheel]
-skip = ["cp36*", "cp37*", "cp38*", "*musllinux_x86_64", "*musllinux_aarch64", "pp*"]
-build-verbosity = 1
-dependency-versions = "latest"
-
-[tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
-manylinux-x86_64-image ="quay.io/pypa/manylinux_2_28_x86_64:latest"
-manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
-before-build = [ 
-    "source scl_source enable gcc-toolset-11",
-    "pip install --upgrade pip wheel build 'pybind11<3' cmake ninja", 
-]
-repair-wheel-command = "auditwheel repair --lib-sdir . -w {dest_dir} {wheel}"
-
-[tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
-before-build = [ 
-    "pip install --upgrade pip wheel build 'pybind11<3' cmake ninja", 
-]
-
-[tool.cibuildwheel.windows]
-archs = ["AMD64"]
-before-build = [ 
-    'pip install --upgrade pip wheel build cmake "pybind11<3" delvewheel', 
-]
-repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
-
 # Ruff configuration
 [tool.ruff]
 line-length = 120  # OpenJij既存設定を継承（999→120段階的調整）
@@ -166,18 +138,6 @@ select = [
     "F",               # Pyflakes
     "I",               # isort
     "UP",              # pyupgrade
-    
-    # Phase 2: 品質向上（将来実装予定）
-    # "B",               # flake8-bugbear
-    # "SIM",             # simplify
-    
-    # Phase 3: 包括的品質（将来実装予定）
-    # "N",               # pep8-naming
-    # "RUF",             # ruff固有ルール
-    
-    # Advanced（長期的検討）
-    # "ANN",             # 型アノテーション
-    # "C90",             # 複雑度チェック
 ]
 ignore = [
     "E501",    # 行長制限無視（120文字移行期のため一時的に）
@@ -203,3 +163,28 @@ line-ending = "auto"
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
+
+[tool.cibuildwheel]
+# musllinuxはサポート対象外（manylinuxのみ対応）
+# cp38以下はrequires-python = ">=3.9"により不要
+skip = ["*musllinux*"]
+build-verbosity = 1
+dependency-versions = "latest"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
+repair-wheel-command = "auditwheel repair --lib-sdir . -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+before-build = [ 
+    "pip install --upgrade wheel build pybind11 cmake ninja", 
+]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+before-build = [ 
+    'pip install --upgrade wheel build cmake pybind11 delvewheel', 
+]
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
