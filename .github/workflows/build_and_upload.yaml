@@ -253,9 +253,8 @@ jobs:
         if: ${{ matrix.os == 'windows-latest'}}
         uses: microsoft/setup-msbuild@v2.0.0
       - name: Install Dependency
-        shell: bash
+        shell: powershell
         run: |
-          set -eux 
           vcpkg update
           vcpkg --triplet x64-windows-static install eigen3
           vcpkg --triplet x64-windows install eigen3

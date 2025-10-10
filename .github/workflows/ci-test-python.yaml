@@ -49,7 +49,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2.0.0
       - name: Install Eigen on windows
         if: ${{ matrix.os == 'windows-latest'}}
-        shell: bash
+        shell: powershell
         run: |
           vcpkg update
           vcpkg --triplet x64-windows-static install eigen3
