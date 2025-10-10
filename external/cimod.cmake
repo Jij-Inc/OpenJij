@@ -24,7 +24,7 @@ set(FETCHCONTENT_QUIET OFF)
 FetchContent_Declare(
     cimod
     GIT_REPOSITORY  https://github.com/Jij-Inc/cimod
-    GIT_TAG         v1.7.1
+    GIT_TAG         v1.7.2
     GIT_SHALLOW     TRUE
     )
 
