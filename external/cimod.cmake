@@ -26,14 +26,9 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://github.com/Jij-Inc/cimod
     GIT_TAG         v1.7.2
     GIT_SHALLOW     TRUE
-    FIND_PACKAGE_ARGS NAMES cxxcimod_header_only
-    EXCLUDE_FROM_ALL
-)
+    )
 
-# FetchContent_MakeAvailableを使用（CMake 3.24+推奨）
-# FETCHCONTENT_TRY_FIND_PACKAGE_MODE=ALWAYSにより、
-# まずfind_package(cxxcimod_header_only)を試み、見つからない場合のみダウンロード
-FetchContent_MakeAvailable(cimod)
+FetchContent_GetProperties(cimod)
 
 
 list(POP_BACK CMAKE_MESSAGE_INDENT)

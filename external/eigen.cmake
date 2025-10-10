@@ -39,14 +39,9 @@ FetchContent_Declare(
     GIT_REPOSITORY  https://gitlab.com/libeigen/eigen
     GIT_TAG         3.4.1
     GIT_SHALLOW     TRUE
-    FIND_PACKAGE_ARGS NAMES Eigen3
-    EXCLUDE_FROM_ALL
-)
+    )
 
-# FetchContent_MakeAvailableを使用（CMake 3.24+推奨）
-# FETCHCONTENT_TRY_FIND_PACKAGE_MODE=ALWAYSにより、
-# まずfind_package(Eigen3)を試み、見つからない場合のみダウンロード
-FetchContent_MakeAvailable(eigen3)
+FetchContent_GetProperties(eigen3)
 
 add_library(openjij-eigen_lib INTERFACE)
 target_include_directories(openjij-eigen_lib INTERFACE ${eigen3_SOURCE_DIR})
