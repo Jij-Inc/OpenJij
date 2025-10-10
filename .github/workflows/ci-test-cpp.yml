@@ -33,10 +33,11 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
+
       - name: Install CMake
         run: |
           uv tool install cmake
-          cmake --version
+
       - name: Install Dep on linux
         if: ${{ matrix.os == 'ubuntu-latest'}}
         shell: bash
@@ -44,41 +45,33 @@ jobs:
           uv tool install ninja
           sudo apt-get install -y libeigen3-dev 
           sudo apt-get install -y libopenblas-dev lcov
+
       - name: Install Dep on macos
         if: ${{ matrix.os == 'macos-latest'}}
         shell: bash
         run: |
           uv tool install ninja
           brew install eigen nlohmann-json lcov libomp
+
       - name: Add msbuild to PATH
         if: ${{ matrix.os == 'windows-latest'}}
         uses: microsoft/setup-msbuild@v2.0.0
-      - name: Prepare Cache
-        if: ${{ matrix.os == 'windows-latest'}}
-        shell: bash
-        run: |
-          set -eux
-          ls  C:/vcpkg
-          MSBuild.exe -version > msbuild_version.txt
-          cat msbuild_version.txt
+
       - name: Install Dep on windows
         if: ${{ matrix.os == 'windows-latest'}}
         shell: powershell
         run: |
-          vcpkg help triplet
-          vcpkg search eigen3
-          vcpkg search openblas
-          vcpkg search blas
-          vcpkg search clpack
-          vcpkg search lapack-reference
+          vcpkg update
           vcpkg --triplet x64-windows-static install eigen3
           vcpkg --triplet x64-windows install eigen3
           vcpkg --triplet x64-windows-static install nlohmann-json
           vcpkg --triplet x64-windows install nlohmann-json
           vcpkg integrate install
+
       - name: Prepare
         shell: bash
         run: mkdir build
+
       - name: CMake Configure
         if: ${{ matrix.os == 'ubuntu-latest'}}
         shell: bash
@@ -88,6 +81,7 @@ jobs:
           -DENABLE_COVERAGE=On
           -S .
           -B build
+
       - name: CMake Configure
         if: ${{ matrix.os == 'macos-latest'}}
         shell: bash
@@ -96,6 +90,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug 
           -S .
           -B build
+
       - name: CMake Configure
         if: ${{ matrix.os == 'windows-latest'}}
         shell: powershell
@@ -105,12 +100,14 @@ jobs:
           -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
           -S .
           -B build
+
       - name: CMake Build
         shell: bash
         run: >
           cmake  
           --build build
           --parallel
+
       - name: CMake Test
         shell: bash
         working-directory: build
@@ -119,6 +116,7 @@ jobs:
           --extra-verbose
           --parallel
           --schedule-random
+
       - uses: codecov/codecov-action@v5
         if: ${{ matrix.os == 'ubuntu-latest'}}
         continue-on-error: true

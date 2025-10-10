@@ -51,14 +51,16 @@ jobs:
         if: ${{ matrix.os == 'windows-latest'}}
         shell: bash
         run: |
+          vcpkg update
           vcpkg --triplet x64-windows-static install eigen3
           vcpkg --triplet x64-windows install eigen3
           vcpkg --triplet x64-windows-static install nlohmann-json
           vcpkg --triplet x64-windows install nlohmann-json
           vcpkg integrate install
-       - name: Install Dependencies
-          shell: bash
-          run: |
+
+      - name: Install Dependencies
+        shell: bash
+        run: |
           set -eux
           uv sync --locked --group test
       - name: Build & Install

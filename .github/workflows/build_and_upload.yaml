@@ -6,8 +6,8 @@ on:
     types: [published]
 
 concurrency:
-      group: Buid-And-Upload
-      cancel-in-progress: false
+  group: Buid-And-Upload
+  cancel-in-progress: false
 
 jobs:
   build_sdist:
@@ -17,10 +17,10 @@ jobs:
       - name: Install uv and set Python version
         uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.12'
-      - name: Install dependencies 
+          python-version: "3.12"
+      - name: Install dependencies
         run: |
-           uv sync --locked --group build
+          uv sync --locked --group build
       - name: Build sdist
         run: |
           uv run python -m build --sdist --outdir ./dist
@@ -30,47 +30,44 @@ jobs:
           path: dist/*.tar.gz
           retention-days: 30
           compression-level: 0
-          
+
   build_wheels_linux_x86_64:
     name: Build wheels linux x86_64
     runs-on: ubuntu-latest
     container: ${{matrix.container}}
     strategy:
-      fail-fast: false 
-      matrix:  
+      fail-fast: false
+      matrix:
         include:
-         - artifact: wheel-linux_x86_64_python39
-           python: /opt/python/cp39-cp39/bin/python
-           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
-         - artifact: wheel-linux_x86_64_python310
-           python: /opt/python/cp310-cp310/bin/python
-           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
-         - artifact: wheel-linux_x86_64_python311
-           python: /opt/python/cp311-cp311/bin/python
-           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
-         - artifact: wheel-linux_x86_64_python312
-           python: /opt/python/cp312-cp312/bin/python
-           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
-         - artifact: wheel-linux_x86_64_python313
-           python: /opt/python/cp313-cp313/bin/python
-           container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
-               
+          - artifact: wheel-linux_x86_64_python39
+            python: /opt/python/cp39-cp39/bin/python
+            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+          - artifact: wheel-linux_x86_64_python310
+            python: /opt/python/cp310-cp310/bin/python
+            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+          - artifact: wheel-linux_x86_64_python311
+            python: /opt/python/cp311-cp311/bin/python
+            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+          - artifact: wheel-linux_x86_64_python312
+            python: /opt/python/cp312-cp312/bin/python
+            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+          - artifact: wheel-linux_x86_64_python313
+            python: /opt/python/cp313-cp313/bin/python
+            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+
     steps:
-      - uses: actions/checkout@v4       
+      - uses: actions/checkout@v4
       - name: Get Python Version
         shell: bash
         run: |
-          set -eux
-          ls /opt/python
-          ${{matrix.python}} --version > python_version.txt
-          cat python_version.txt
+          ${{matrix.python}} --version
       - name: Install Dependencies
         shell: bash
         run: |
           set -eux
           ${{matrix.python}} -m pip install --upgrade pip
           ${{matrix.python}} -m pip install --upgrade build auditwheel
-      - name: Build 
+      - name: Build
         run: |
           set -x
           echo "::group::Set Intel oneAPI"
@@ -92,9 +89,8 @@ jobs:
           export FFLAGS='-march=x86-64-v3 -mtune=generic'
           ${{matrix.python}} -m build --wheel --outdir ./dist
           echo "::endgroup::"
-          #. /opt/intel/oneapi/setvars.sh --force  --config="config.txt"
-          # export FC=ifx
-      - name: Show Files 
+
+      - name: Show Files
         id: wheel
         shell: bash
         run: |
@@ -106,19 +102,20 @@ jobs:
           for f in *.whl; do ${{matrix.python}} -m auditwheel repair -w ../wheelhouse $f; done    
           cd ../wheelhouse
           du -ah ./
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
-          retention-days: 30 
+          retention-days: 30
           compression-level: 0
-  
+
   build_wheels_linux_aarch64:
     name: Build wheels linux aarch64 ${{matrix.CIBW_BUILD}}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false 
-      matrix:  
+      fail-fast: false
+      matrix:
         include:
           - artifact: wheel-linux_aarch64_python39
             os: ubuntu-latest
@@ -141,7 +138,7 @@ jobs:
             arch: aarch64
             CIBW_BUILD: cp313-manylinux_aarch64
     steps:
-      - uses: actions/checkout@v4       
+      - uses: actions/checkout@v4
       - name: Set up QEME
         uses: docker/setup-qemu-action@v3
         with:
@@ -150,32 +147,32 @@ jobs:
         id: buildx
         uses: docker/setup-buildx-action@v3
         with:
-            install: true
+          install: true
       - name: Build wheels on ${{matrix.arch}}
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_BUILD: ${{matrix.CIBW_BUILD}}
           CIBW_ENVIRONMENT: ""
-          CIBW_PLATFORM:  linux
+          CIBW_PLATFORM: linux
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_BEFORE_ALL_LINUX: >
-               dnf config-manager --set-enabled powertools &&
-               dnf makecache --refresh &&
-               dnf -y --enablerepo=powertools install openblas-static &&
-               dnf -y --enablerepo=powertools install lapack-static &&
-               dnf -y install gcc-toolset-11 &&
-               dnf -y --enablerepo=powertools install eigen3-devel
+            dnf config-manager --set-enabled powertools &&
+            dnf makecache --refresh &&
+            dnf -y --enablerepo=powertools install openblas-static &&
+            dnf -y --enablerepo=powertools install lapack-static &&
+            dnf -y install gcc-toolset-11 &&
+            dnf -y --enablerepo=powertools install eigen3-devel
           CIBW_BEFORE_BUILD_LINUX: >
-               source scl_source enable gcc-toolset-11 &&
-               pip install 'pybind11<3' cmake ninja
+            source scl_source enable gcc-toolset-11 &&
+            pip install 'pybind11<3' cmake ninja
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
-          retention-days: 30   
+          retention-days: 30
           compression-level: 0
-          
+
   build_wheels_macos_x86_64:
     name: Build wheels macos x86_64
     runs-on: macos-13
@@ -238,25 +235,25 @@ jobs:
           path: ./wheelhouse/*.whl
           retention-days: 30
           compression-level: 0
-          
+
   build_wheels_windows:
-    name: Build wheels windows ${{ matrix.arch }} 
+    name: Build wheels windows ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false 
-      matrix:  
+      fail-fast: false
+      matrix:
         include:
           - os: windows-latest
             arch: AMD64
-            CIBW_PLATFORM: windows 
+            CIBW_PLATFORM: windows
             CIBW_ENVIRONMENT: "CMAKE_TOOLCHAIN_FILE='C:/vcpkg/scripts/buildsystems/vcpkg.cmake'"
     steps:
-      - uses: actions/checkout@v4       
+      - uses: actions/checkout@v4
       - name: Add msbuild to PATH
         if: ${{ matrix.os == 'windows-latest'}}
         uses: microsoft/setup-msbuild@v2.0.0
-      - name: Install Dependency 
-        shell: bash 
+      - name: Install Dependency
+        shell: bash
         run: |
           set -eux 
           vcpkg update
@@ -269,22 +266,30 @@ jobs:
         uses: pypa/cibuildwheel@v2.22.0
         env:
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
-          CIBW_PLATFORM:  ${{ matrix.CIBW_PLATFORM }}
+          CIBW_PLATFORM: ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
-          
+
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-windows
           path: ./wheelhouse/*.whl
-          retention-days: 30       
+          retention-days: 30
           compression-level: 0
-          
+
   upload_pypi:
-    needs: [build_wheels_linux_x86_64, build_wheels_linux_aarch64, build_wheels_macos_x86_64, build_wheels_macos_arm64, build_wheels_windows, build_sdist]
+    needs:
+      [
+        build_wheels_linux_x86_64,
+        build_wheels_linux_aarch64,
+        build_wheels_macos_x86_64,
+        build_wheels_macos_arm64,
+        build_wheels_windows,
+        build_sdist,
+      ]
     runs-on: ubuntu-latest
     permissions:
-        id-token: write
+      id-token: write
     if: ${{github.event_name == 'release'}}
     steps:
       - uses: actions/download-artifact@v4
