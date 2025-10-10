@@ -51,25 +51,22 @@ FindMinimumIntegerCubic(
   const std::int64_t x,
   RandomNumberEngine &random_number_engine
 ) {
-  if (std::abs(a) < ZERO_TOL && std::abs(b) < ZERO_TOL && std::abs(c) < ZERO_TOL) {
-    return {x + std::uniform_int_distribution<std::int64_t>(l, u)(random_number_engine), 0.0};
-  }
-
-  const double val_l = a * l * l * l + b * l * l + c * l;
-  const double val_u = a * u * u * u + b * u * u + c * u;
-
-  std::int64_t best_dx;
-  double min_val;
-
-  if (val_l <= val_u) {
-    best_dx = l;
-    min_val = val_l;
-  } else {
-    best_dx = u;
-    min_val = val_u;
-  }
 
   if (std::abs(a) >= ZERO_TOL) {
+    const double val_l = a * l * l * l + b * l * l + c * l;
+    const double val_u = a * u * u * u + b * u * u + c * u;
+
+    std::int64_t best_dx;
+    double min_val;
+
+    if (val_l <= val_u) {
+      best_dx = l;
+      min_val = val_l;
+    } else {
+      best_dx = u;
+      min_val = val_u;
+    }
+
     const double delta = b * b - 3 * a * c;
     if (delta >= 0) {
       const double sqrt_delta = std::sqrt(delta);
@@ -96,28 +93,10 @@ FindMinimumIntegerCubic(
         }
       }
     }
-  } else if (std::abs(b) >= ZERO_TOL) {
-    const double vertex = -c / (2 * b);
-    if (l < vertex && vertex < u) {
-      const auto cand1 = static_cast<std::int64_t>(std::floor(vertex));
-      const double val1 = b * cand1 * cand1 + c * cand1;
-      if (val1 < min_val) {
-        min_val = val1;
-        best_dx = cand1;
-      }
-
-      const auto cand2 = static_cast<std::int64_t>(std::ceil(vertex));
-      if (cand2 <= u) {
-        const double val2 = b * cand2 * cand2 + c * cand2;
-        if (val2 < min_val) {
-          min_val = val2;
-          best_dx = cand2;
-        }
-      }
-    }
+    return {x + best_dx, min_val};
+  } else {
+    return FindMinimumIntegerQuadratic(b, c, l, u, x, random_number_engine);
   }
-  
-  return {x + best_dx, min_val};
 }
 
 template <typename RandomNumberEngine>
@@ -133,35 +112,30 @@ FindMinimumIntegerQuartic(
   RandomNumberEngine &random_number_engine
 ) {
 
-  if (std::abs(a) < ZERO_TOL && std::abs(b) < ZERO_TOL && std::abs(c) < ZERO_TOL && std::abs(d) < ZERO_TOL) {
-    return {x + std::uniform_int_distribution<std::int64_t>(l, u)(random_number_engine), 0.0};
-  }
+  if (std::abs(a) >= ZERO_TOL) {
+    const auto f = [&](double dx) {
+      return a * dx * dx * dx * dx + b * dx * dx * dx + c * dx * dx + d * dx;
+    };
 
-  const auto f = [&](double dx) {
-    return a * dx * dx * dx * dx + b * dx * dx * dx + c * dx * dx + d * dx;
-  };
+    const double val_l = f(static_cast<double>(l));
+    const double val_u = f(static_cast<double>(u));
+    const double m_pi = 3.14159265358979323846;
 
-  const double val_l = f(static_cast<double>(l));
-  const double val_u = f(static_cast<double>(u));
-  const double m_pi = 3.14159265358979323846;
+    std::int64_t best_dx;
+    double min_val;
 
-  std::int64_t best_dx;
-  double min_val;
-
-  if (val_l <= val_u) {
-    best_dx = l;
-    min_val = val_l;
-  } else {
-    best_dx = u;
-    min_val = val_u;
-  }
-  
-  const double A = 4.0 * a;
-  const double B = 3.0 * b;
-  const double C = 2.0 * c;
-  const double D = d;
-
-  if (std::abs(A) >= ZERO_TOL) {
+    if (val_l <= val_u) {
+      best_dx = l;
+      min_val = val_l;
+    } else {
+      best_dx = u;
+      min_val = val_u;
+    }
+    
+    const double A = 4.0 * a;
+    const double B = 3.0 * b;
+    const double C = 2.0 * c;
+    const double D = d;
     const double p = (3.0 * A * C - B * B) / (3.0 * A * A);
     const double q = (2.0 * B * B * B - 9.0 * A * B * C + 27.0 * A * A * D) / (27.0 * A * A * A);
 
@@ -221,59 +195,11 @@ FindMinimumIntegerQuartic(
       best_dx = result3.first;
       min_val = result3.second;
     }
-  } else if (std::abs(B) >= ZERO_TOL) {
-    const double delta = C * C - 4.0 * B * D;
-    if (delta >= 0) {
-      const double sqrt_delta = std::sqrt(delta);
-      const double r = (-C + sqrt_delta) / (2.0 * B);
-      const double f_double_prime = 6.0 * b * r + 2.0 * c;
-      if (f_double_prime > 0 && l < r && r < u) {
-        const double floor_r = std::floor(r);
-        const double v1 = f(floor_r);
-        if (v1 < min_val) {
-          min_val = v1;
-          best_dx = static_cast<std::int64_t>(floor_r);
-        }
-
-        const double ceil_r = std::ceil(r);
-        if (static_cast<std::int64_t>(ceil_r) <= u) {
-          const double v2 = f(ceil_r);
-          if (v2 < min_val) {
-            min_val = v2;
-          }
-        }
-      }
-    }
-  } else if (std::abs(C) >= ZERO_TOL) {
-    const double r = -D / C;
-    const double f_double_prime = 2.0 * c;
-    if (f_double_prime > 0 && l < r && r < u) {
-      const double floor_r = std::floor(r);
-      const double v1 = f(floor_r);
-      if (v1 < min_val) {
-        min_val = v1;
-        best_dx = static_cast<std::int64_t>(floor_r);
-      }
-
-      const double ceil_r = std::ceil(r);
-      if (static_cast<std::int64_t>(ceil_r) <= u) {
-        const double v2 = f(ceil_r);
-        if (v2 < min_val) {
-          min_val = v2;
-          best_dx = static_cast<std::int64_t>(ceil_r);
-        }
-      }
-    }
+    return {x + best_dx, min_val};
+  } else {
+    return FindMinimumIntegerCubic(b, c, d, l, u, x, random_number_engine);
   }
-
-  return {x + best_dx, min_val};
 }
 
 }
 }
-
-
-
-
-
-
