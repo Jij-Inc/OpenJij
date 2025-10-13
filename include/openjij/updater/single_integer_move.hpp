@@ -77,36 +77,24 @@ struct HeatBathUpdater {
   template <typename SystemType>
   std::int64_t ForAll(SystemType &sa_system, const std::int64_t index,
                       const double T, const double _progress) {
-
-    const auto [max_weight_state_value, min_dE] = sa_system.GetMinEnergyDifference(index);
     const auto &var = sa_system.GetState()[index];
     const double beta = 1.0 / T;
-    double z = 0.0;
-
-    // Calculate the partition function
-    for (std::int64_t i = 0; i < var.num_states; ++i) {
-      const double dE = sa_system.GetEnergyDifference(index, var.GetValueFromState(i)) - min_dE;
-      z += std::exp(-beta * dE);
-    }
-
-    // Select a state based on the partition function
     std::int64_t selected_state_number = -1;
-    double cumulative_prob = 0.0;
-    const double rand = dist(sa_system.random_number_engine) * z;
+    double max_z = -std::numeric_limits<double>::infinity();
 
     for (std::int64_t i = 0; i < var.num_states; ++i) {
-      const double dE = sa_system.GetEnergyDifference(index, var.GetValueFromState(i)) - min_dE;
-      cumulative_prob += std::exp(-beta * dE);
-      if (rand <= cumulative_prob) {
+      const double g =
+          -std::log(-std::log(dist(sa_system.random_number_engine)));
+      const double z = -beta * sa_system.GetEnergyDifference(
+                                   index, var.GetValueFromState(i)) + g;
+      if (z > max_z) {
+        max_z = z;
         selected_state_number = i;
-        break;
       }
     }
-
     if (selected_state_number == -1) {
       throw std::runtime_error("No state selected.");
     }
-
     return var.GetValueFromState(selected_state_number);
   }
 
