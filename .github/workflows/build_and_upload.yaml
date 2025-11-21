@@ -9,7 +9,7 @@ jobs:
   build_sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install uv and set Python version
         uses: astral-sh/setup-uv@v7
         with:
@@ -52,7 +52,7 @@ jobs:
             container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Get Python Version
         shell: bash
         run: |
@@ -135,7 +135,7 @@ jobs:
             arch: aarch64
             CIBW_BUILD: cp313-manylinux_aarch64
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up QEME
         uses: docker/setup-qemu-action@v3
         with:
@@ -180,7 +180,7 @@ jobs:
           - artifact: wheel-macosx-x86_64
             MACOSX_DEPLOYMENT_TARGET: "13.0"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Dependency
         shell: bash
         run: |
@@ -211,7 +211,7 @@ jobs:
           - artifact: wheel-macosx-arm64
             MACOSX_DEPLOYMENT_TARGET: "14.0"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Install Dependency
         shell: bash
         run: |
@@ -243,7 +243,7 @@ jobs:
             CIBW_PLATFORM: windows
             CIBW_ENVIRONMENT: "CMAKE_TOOLCHAIN_FILE='C:/vcpkg/scripts/buildsystems/vcpkg.cmake'"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Add msbuild to PATH
         if: ${{ matrix.os == 'windows-latest'}}
         uses: microsoft/setup-msbuild@v2.0.0
