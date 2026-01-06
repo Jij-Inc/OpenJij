@@ -32,7 +32,7 @@ authors = [
 ]
 requires-python = ">=3.9, <3.14"
 dependencies = [
-    "numpy >=1.19.3, < 2.4.0",
+    "numpy >= 1.19.3, < 2.5.0",
     "dimod >=0.9.11, < 0.13.0",
     "jij-cimod >= 1.7.0, < 1.8.0",
 ]
