@@ -32,6 +32,11 @@ FetchContent_Declare(
 FetchContent_GetProperties(cimod)
 if(NOT cimod_POPULATED)
     FetchContent_Populate(cimod)
+    # cimod v1.7.2 checks EIGEN3_FOUND after find_package(Eigen3 CONFIG),
+    # but vcpkg provides the imported target without setting that variable.
+    if(TARGET Eigen3::Eigen)
+        set(EIGEN3_FOUND ON)
+    endif()
     add_subdirectory(${cimod_SOURCE_DIR} ${cimod_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 
