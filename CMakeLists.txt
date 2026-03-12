@@ -157,12 +157,24 @@ endif()
 
 find_package(Eigen3 CONFIG)
 
+# === DEBUG: Eigen3 detection diagnostics ===
+message(STATUS "[DEBUG] EIGEN3_FOUND = '${EIGEN3_FOUND}'")
+message(STATUS "[DEBUG] Eigen3_FOUND = '${Eigen3_FOUND}'")
 if(TARGET Eigen3::Eigen)
+  message(STATUS "[DEBUG] TARGET Eigen3::Eigen exists = YES")
+else()
+  message(STATUS "[DEBUG] TARGET Eigen3::Eigen exists = NO")
+endif()
+message(STATUS "[DEBUG] EIGEN3_VERSION_STRING = '${EIGEN3_VERSION_STRING}'")
+message(STATUS "[DEBUG] Eigen3_VERSION = '${Eigen3_VERSION}'")
+# === END DEBUG ===
+
+if(EIGEN3_FOUND)
   message(STATUS "Skip Download eigen3")
-else() 
+else()
   message(STATUS "Downlod eigen3")
   include(external/eigen.cmake)
-endif() 
+endif()
 
 find_package(nlohmann_json CONFIG)
 if(TARGET nlohmann_json::nlohmann_json)
