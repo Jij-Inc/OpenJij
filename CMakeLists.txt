@@ -160,7 +160,7 @@ find_package(Eigen3 CONFIG)
 if(TARGET Eigen3::Eigen OR EIGEN3_FOUND)
   message(STATUS "Skip Download eigen3")
 else()
-  message(STATUS "Downlod eigen3")
+  message(STATUS "Download eigen3")
   include(external/eigen.cmake)
 endif()
 
