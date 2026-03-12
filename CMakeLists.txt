@@ -157,7 +157,7 @@ endif()
 
 find_package(Eigen3 CONFIG)
 
-if(EIGEN3_FOUND OR TARGET Eigen3::Eigen)
+if(TARGET Eigen3::Eigen OR EIGEN3_FOUND)
   message(STATUS "Skip Download eigen3")
 else()
   message(STATUS "Downlod eigen3")

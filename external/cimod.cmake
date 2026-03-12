@@ -35,7 +35,7 @@ if(NOT cimod_POPULATED)
     # cimod v1.7.2 checks EIGEN3_FOUND after find_package(Eigen3 CONFIG),
     # but Eigen3 5.x no longer sets EIGEN3_FOUND (removed in commit f2984cd0).
     # Bridge the gap by setting it when the imported target exists.
-    if(NOT EIGEN3_FOUND AND TARGET Eigen3::Eigen)
+    if(TARGET Eigen3::Eigen AND NOT EIGEN3_FOUND)
         set(EIGEN3_FOUND ON)
     endif()
     add_subdirectory(${cimod_SOURCE_DIR} ${cimod_BINARY_DIR} EXCLUDE_FROM_ALL)
