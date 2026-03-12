@@ -32,6 +32,12 @@ FetchContent_Declare(
 FetchContent_GetProperties(cimod)
 if(NOT cimod_POPULATED)
     FetchContent_Populate(cimod)
+    # cimod v1.7.2 checks EIGEN3_FOUND after find_package(Eigen3 CONFIG),
+    # but Eigen3 5.x no longer sets EIGEN3_FOUND (removed in commit f2984cd0).
+    # Bridge the gap by setting it when the imported target exists.
+    if(TARGET Eigen3::Eigen AND NOT EIGEN3_FOUND)
+        set(EIGEN3_FOUND ON)
+    endif()
     add_subdirectory(${cimod_SOURCE_DIR} ${cimod_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 

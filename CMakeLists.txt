@@ -157,12 +157,12 @@ endif()
 
 find_package(Eigen3 CONFIG)
 
-if(EIGEN3_FOUND)
+if(TARGET Eigen3::Eigen OR EIGEN3_FOUND)
   message(STATUS "Skip Download eigen3")
-else() 
-  message(STATUS "Downlod eigen3")
+else()
+  message(STATUS "Download eigen3")
   include(external/eigen.cmake)
-endif() 
+endif()
 
 find_package(nlohmann_json CONFIG)
 if(TARGET nlohmann_json::nlohmann_json)
