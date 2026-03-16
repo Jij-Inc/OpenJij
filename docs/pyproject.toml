@@ -12,4 +12,5 @@ dependencies = [
     "ommx>=2.3.6",
     "ommx-openjij-adapter>=2.3.6",
     "openjij>=0.11.6",
+    "scikit-learn>=1.8.0",
 ]
