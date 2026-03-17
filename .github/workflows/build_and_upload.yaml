@@ -20,7 +20,7 @@ jobs:
       - name: Build sdist
         run: |
           uv run python -m build --sdist --outdir ./dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: wheel-sdist
           path: dist/*.tar.gz
@@ -100,7 +100,7 @@ jobs:
           for f in *.whl; do ${{matrix.python}} -m auditwheel repair -w ../wheelhouse $f; done    
           cd ../wheelhouse
           du -ah ./
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
@@ -163,7 +163,7 @@ jobs:
             source scl_source enable gcc-toolset-11 &&
             pip install 'pybind11<3' cmake ninja
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
@@ -194,7 +194,7 @@ jobs:
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
           CIBW_ENVIRONMENT: >
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
@@ -224,7 +224,7 @@ jobs:
           CIBW_ARCHS: arm64
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
           CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{matrix.artifact}}
           path: ./wheelhouse/*.whl
@@ -264,7 +264,7 @@ jobs:
           CIBW_ARCHS: ${{matrix.arch}}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: wheel-windows
           path: ./wheelhouse/*.whl
