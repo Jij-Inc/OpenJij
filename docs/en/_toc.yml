@@ -13,7 +13,6 @@ parts:
       - file: tutorial/004-jijmodeling_openjij_tsp
       - file: tutorial/005-Evaluation
       - file: tutorial/006-benchmark_sparse_dense
-      - file: tutorial/007-Machine_Learning_by_QA
       - file: tutorial/optimization_index
         sections:
         - file: tutorial/optimization/number_partition
