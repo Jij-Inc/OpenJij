@@ -17,7 +17,7 @@ requires = [
     "scikit-build-core>=0.10",
     "setuptools_scm[toml]",
     "pybind11>=2.12.0",
-    "oldest-supported-numpy",
+    "numpy>=2.0.0",
 ]
 build-backend = "scikit_build_core.build"
 
@@ -30,9 +30,9 @@ license = {text = "Apache License 2.0"}
 authors = [
     {name = "Jij Inc.", email = "info@openjij.org"}
 ]
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.9, <3.15"
 dependencies = [
-    "numpy >=1.19.3, < 2.4.0",
+    "numpy >=1.19.3, < 2.5.0",
     "dimod >=0.9.11, < 0.13.0",
     "jij-cimod >= 1.7.0, < 1.8.0",
 ]
@@ -45,6 +45,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11", 
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Operating System :: Microsoft :: Windows",
