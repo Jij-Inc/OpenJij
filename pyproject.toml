@@ -17,7 +17,11 @@ requires = [
     "scikit-build-core>=0.10",
     "setuptools_scm[toml]",
     "pybind11>=2.12.0",
-    "numpy>=2.0.0",
+    # NOTE: ``oldest-supported-numpy`` is deprecated and has no entry for
+    # Python 3.14, which broke the source build there. The C++ extension is
+    # built with pybind11 + Eigen and does not touch the NumPy C API at compile
+    # time (no ``numpy/arrayobject.h`` / ``import_array`` anywhere), so no
+    # build-time numpy is required.
 ]
 build-backend = "scikit_build_core.build"
 
@@ -32,9 +36,15 @@ authors = [
 ]
 requires-python = ">=3.9, <3.15"
 dependencies = [
-    "numpy >=1.19.3, < 2.5.0",
+    "numpy >=1.19.3, < 2.4.0",
     "dimod >=0.9.11, < 0.13.0",
     "jij-cimod >= 1.7.0, < 1.8.0",
+    # Python 3.14 floors: these compiled deps published cp314 wheels only from
+    # the versions below (mirrors jij-cimod). Without these floors the universal
+    # resolver pins an older release with no cp314 wheel, so 3.14 falls back to a
+    # source build. The markers leave the 3.9-3.13 resolution untouched.
+    "numpy>=2.3.2; python_version >= '3.14'",
+    "dimod>=0.12.21; python_version >= '3.14'",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
