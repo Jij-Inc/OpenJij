@@ -168,7 +168,7 @@ jobs:
             dnf -y --enablerepo=powertools install eigen3-devel
           CIBW_BEFORE_BUILD_LINUX: >
             source scl_source enable gcc-toolset-11 &&
-            pip install pybind11 cmake ninja
+            pip install --upgrade pybind11 cmake ninja
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.15"
       - uses: actions/upload-artifact@v4
         with:
