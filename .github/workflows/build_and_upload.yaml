@@ -50,6 +50,9 @@ jobs:
           - artifact: wheel-linux_x86_64_python313
             python: /opt/python/cp313-cp313/bin/python
             container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
+          - artifact: wheel-linux_x86_64_python314
+            python: /opt/python/cp314-cp314/bin/python
+            container: ghcr.io/openjij/openjij-builder-minimum-manylinux_2_28_x86_64:latest
 
     steps:
       - uses: actions/checkout@v5
@@ -134,6 +137,10 @@ jobs:
             os: ubuntu-latest
             arch: aarch64
             CIBW_BUILD: cp313-manylinux_aarch64
+          - artifact: wheel-linux_aarch64_python314
+            os: ubuntu-latest
+            arch: aarch64
+            CIBW_BUILD: cp314-manylinux_aarch64
     steps:
       - uses: actions/checkout@v5
       - name: Set up QEME
@@ -161,8 +168,8 @@ jobs:
             dnf -y --enablerepo=powertools install eigen3-devel
           CIBW_BEFORE_BUILD_LINUX: >
             source scl_source enable gcc-toolset-11 &&
-            pip install 'pybind11<3' cmake ninja
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
+            pip install --upgrade pybind11 cmake ninja
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.15"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
@@ -191,7 +198,7 @@ jobs:
         env:
           CIBW_PLATFORM: macos
           CIBW_ARCHS: x86_64
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.15"
           CIBW_ENVIRONMENT: >
             MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}
       - uses: actions/upload-artifact@v4
@@ -222,7 +229,7 @@ jobs:
         env:
           CIBW_PLATFORM: macos
           CIBW_ARCHS: arm64
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.15"
           CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=${{ matrix.MACOSX_DEPLOYMENT_TARGET }}"
       - uses: actions/upload-artifact@v4
         with:
@@ -262,7 +269,7 @@ jobs:
           CIBW_ENVIRONMENT: ${{ matrix.CIBW_ENVIRONMENT }}
           CIBW_PLATFORM: ${{ matrix.CIBW_PLATFORM }}
           CIBW_ARCHS: ${{matrix.arch}}
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.14"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.15"
 
       - uses: actions/upload-artifact@v4
         with:
