@@ -177,7 +177,7 @@ jobs:
       matrix:
         include:
           - artifact: wheel-macosx-x86_64
-            MACOSX_DEPLOYMENT_TARGET: "13.0"
+            MACOSX_DEPLOYMENT_TARGET: "14.0"
     steps:
       - uses: actions/checkout@v5
       - name: Install Dependency
@@ -201,7 +201,7 @@ jobs:
 
   build_wheels_macos_arm64:
     name: Build wheels macos arm64
-    runs-on: macos-15
+    runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
