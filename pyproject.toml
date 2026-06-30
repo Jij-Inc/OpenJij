@@ -16,7 +16,7 @@
 requires = [
     "scikit-build-core>=0.10",
     "setuptools_scm[toml]",
-    "pybind11>=2.12.0",
+    "pybind11>=3.0.0,<4",
     "oldest-supported-numpy",
 ]
 build-backend = "scikit_build_core.build"
@@ -30,21 +30,24 @@ license = {text = "Apache License 2.0"}
 authors = [
     {name = "Jij Inc.", email = "info@openjij.org"}
 ]
-requires-python = ">=3.9, <3.14"
+requires-python = ">=3.10, <3.15"
 dependencies = [
-    "numpy >=1.19.3, < 2.4.0",
-    "dimod >=0.9.11, < 0.13.0",
-    "jij-cimod >= 1.7.0, < 1.8.0",
+    "numpy>=1.23.5,<2.3; python_version == '3.10'",
+    "numpy>=1.26.4,<2.5; python_version == '3.11'",
+    "numpy>=2.0.0,<2.6; python_version >= '3.12' and python_version < '3.14'",
+    "numpy>=2.3.2,<2.6; python_version >= '3.14'",
+    "dimod>=0.12.22,<0.13.0",
+    "jij-cimod>=1.7.5,<1.8.0",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11", 
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Operating System :: Microsoft :: Windows",
@@ -119,7 +122,7 @@ junit_logging = "all"
 # Ruff configuration
 [tool.ruff]
 line-length = 120  # OpenJij既存設定を継承（999→120段階的調整）
-target-version = "py39"  # 最小サポート版（python_requires = >=3.9）
+target-version = "py310"  # 最小サポート版（python_requires = >=3.10）
 exclude = [
     ".git",
     ".venv", 
@@ -141,7 +144,7 @@ select = [
 ]
 ignore = [
     "E501",    # 行長制限無視（120文字移行期のため一時的に）
-    "UP007",   # typing.Union → X | Y (Python 3.9互換性維持)
+    "UP007",   # typing.Union → X | Y の整理は別変更にする
     "S101",    # assert使用許可（pytest用）
     "T20",     # print文許可（デバッグ用）
 ]
@@ -166,8 +169,9 @@ max-complexity = 10
 
 [tool.cibuildwheel]
 # musllinuxはサポート対象外（manylinuxのみ対応）
-# cp38以下はrequires-python = ">=3.9"により不要
-skip = ["*musllinux*"]
+# requires-python = ">=3.10" により古い CPython ABI は不要
+# cp31?t は free-threaded wheel を今回サポートしないため除外
+skip = ["*musllinux*", "cp31?t-*"]
 build-verbosity = 1
 dependency-versions = "latest"
 
@@ -179,12 +183,12 @@ repair-wheel-command = "auditwheel repair --lib-sdir . -w {dest_dir} {wheel}"
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
 before-build = [ 
-    "pip install --upgrade wheel build 'pybind11' cmake ninja", 
+    "pip install --upgrade wheel build cmake ninja",
 ]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
 before-build = [ 
-    'pip install --upgrade wheel build cmake "pybind11" delvewheel', 
+    "pip install --upgrade wheel build cmake delvewheel",
 ]
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
