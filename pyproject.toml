@@ -16,7 +16,7 @@
 requires = [
     "scikit-build-core>=0.10",
     "setuptools_scm[toml]",
-    "pybind11>=2.12.0",
+    "pybind11>=3.0.0,<4",
     "oldest-supported-numpy",
 ]
 build-backend = "scikit_build_core.build"
@@ -32,9 +32,12 @@ authors = [
 ]
 requires-python = ">=3.10, <3.15"
 dependencies = [
-    "numpy >=1.19.3, < 2.4.0",
-    "dimod >=0.9.11, < 0.13.0",
-    "jij-cimod >= 1.7.0, < 1.8.0",
+    "numpy>=1.23.5,<2.3; python_version == '3.10'",
+    "numpy>=1.26.4,<2.5; python_version == '3.11'",
+    "numpy>=2.0.0,<2.6; python_version >= '3.12' and python_version < '3.14'",
+    "numpy>=2.3.2,<2.6; python_version >= '3.14'",
+    "dimod>=0.12.22,<0.13.0",
+    "jij-cimod>=1.7.5,<1.8.0",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
