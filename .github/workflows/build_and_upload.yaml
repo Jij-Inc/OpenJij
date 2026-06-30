@@ -171,7 +171,7 @@ jobs:
 
   build_wheels_macos_x86_64:
     name: Build wheels macos x86_64
-    runs-on: macos-13
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
       matrix:
@@ -201,7 +201,7 @@ jobs:
 
   build_wheels_macos_arm64:
     name: Build wheels macos arm64
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
