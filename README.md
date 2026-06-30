@@ -13,7 +13,7 @@
 
 [![DOI](https://zenodo.org/badge/164117633.svg)](https://zenodo.org/badge/latestdoi/164117633)
 
-- python >= 3.9
+- Python 3.10-3.14
 - (optional) gcc >= 7.0.0
 - (optional) cmake >= 3.22
 - (optional) Ninja
