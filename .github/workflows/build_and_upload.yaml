@@ -136,7 +136,7 @@ jobs:
             CIBW_BUILD: cp314-manylinux_aarch64
     steps:
       - uses: actions/checkout@v5
-      - name: Set up QEME
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
           platforms: all
