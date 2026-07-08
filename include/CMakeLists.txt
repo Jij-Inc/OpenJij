@@ -34,10 +34,17 @@ target_link_libraries(cxxjij_header_only INTERFACE
     cxxcimod_header_only
     nlohmann_json::nlohmann_json
     $<IF:$<TARGET_EXISTS:Eigen3::Eigen>,Eigen3::Eigen,openjij-eigen_lib>
-    $<$<TARGET_EXISTS:OpenMP::OpenMP_CXX>:OpenMP::OpenMP_CXX>
     $<$<TARGET_EXISTS:BLAS::BLAS>:BLAS::BLAS>
     $<$<TARGET_EXISTS:LAPACK::LAPACK>:LAPACK::LAPACK>
 )
+
+if(OPENJIJ_USE_OMP)
+  target_link_libraries(cxxjij_header_only INTERFACE OpenMP::OpenMP_CXX)
+  target_compile_definitions(cxxjij_header_only INTERFACE
+    USE_OMP
+    EIGEN_DONT_PARALLELIZE
+  )
+endif()
 
 target_compile_definitions(cxxjij_header_only INTERFACE 
     EIGEN_MPL2_ONLY
