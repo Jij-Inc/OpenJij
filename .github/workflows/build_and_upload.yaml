@@ -214,7 +214,7 @@ jobs:
           test -f .vendor/llvm-openmp/prefix/lib/libomp.dylib
           test -f .vendor/llvm-openmp/prefix/info/licenses/openmp/LICENSE.TXT
           lipo -info .vendor/llvm-openmp/prefix/lib/libomp.dylib
-          lipo -verify_arch "${{ matrix.cibw_arch }}" .vendor/llvm-openmp/prefix/lib/libomp.dylib
+          lipo .vendor/llvm-openmp/prefix/lib/libomp.dylib -verify_arch "${{ matrix.cibw_arch }}"
           otool -D .vendor/llvm-openmp/prefix/lib/libomp.dylib
       - name: Prepare llvm-openmp license notice
         shell: bash
