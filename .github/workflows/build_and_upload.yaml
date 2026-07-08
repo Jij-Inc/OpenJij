@@ -205,6 +205,7 @@ jobs:
           set -euxo pipefail
           tar -xf .vendor/llvm-openmp/archive/llvm-openmp.conda -C .vendor/llvm-openmp/pkg
           zstd -dc .vendor/llvm-openmp/pkg/pkg-*.tar.zst | tar -xf - -C .vendor/llvm-openmp/prefix
+          zstd -dc .vendor/llvm-openmp/pkg/info-*.tar.zst | tar -xf - -C .vendor/llvm-openmp/prefix
       - name: Check llvm-openmp supply
         shell: bash
         run: |
