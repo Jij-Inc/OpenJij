@@ -188,6 +188,11 @@ jobs:
             llvm_openmp_sha256: ccbaad6bbc88f135ab849bc36af5fa6eda36a9ed18ce6f58e3dde3d11784c156
     steps:
       - uses: actions/checkout@v5
+      - name: Install Dependency
+        shell: bash
+        run: |
+          set -eux
+          brew install eigen nlohmann-json
       - name: Download conda-forge llvm-openmp
         shell: bash
         run: |
@@ -237,8 +242,7 @@ jobs:
             CMAKE_ARGS='-DCMAKE_PREFIX_PATH=${{ github.workspace }}/.vendor/llvm-openmp/prefix
             -DOpenMP_ROOT=${{ github.workspace }}/.vendor/llvm-openmp/prefix
             -DCMAKE_INSTALL_RPATH=${{ github.workspace }}/.vendor/llvm-openmp/prefix/lib
-            -DOPENJIJ_REQUIRE_OPENMP=ON
-            -DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew;/usr/local'
+            -DOPENJIJ_REQUIRE_OPENMP=ON'
       - uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.artifact}}
