@@ -14,7 +14,7 @@
 
 [build-system]
 requires = [
-    "scikit-build-core>=0.10",
+    "scikit-build-core>=1.0",
     "setuptools_scm[toml]",
     "pybind11>=3.0.0,<4",
     "oldest-supported-numpy",
@@ -90,7 +90,7 @@ dev = [
 ]
 
 [tool.scikit-build]
-minimum-version = "0.10"
+minimum-version = "build-system.requires"
 strict-config = true
 build.verbose = true
 wheel.install-dir = "openjij"
