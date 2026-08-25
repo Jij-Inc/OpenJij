@@ -1020,6 +1020,7 @@ void declare_SASampler(py::module &m, const std::string &post_name = "") {
    py_class.def("set_update_method", &SAS::SetUpdateMethod, "update_method"_a);
    py_class.def("set_random_number_engine", &SAS::SetRandomNumberEngine, "random_number_engine"_a);
    py_class.def("set_temperature_schedule", &SAS::SetTemperatureSchedule, "temperature_schedule"_a);
+   py_class.def("set_log_history", &SAS::SetLogHistory, "log_history"_a);
    py_class.def("get_model", &SAS::GetModel);
    py_class.def("get_num_sweeps", &SAS::GetNumSweeps);
    py_class.def("get_num_reads", &SAS::GetNumReads);
@@ -1029,9 +1030,12 @@ void declare_SASampler(py::module &m, const std::string &post_name = "") {
    py_class.def("get_update_method", &SAS::GetUpdateMethod);
    py_class.def("get_random_number_engine", &SAS::GetRandomNumberEngine);
    py_class.def("get_temperature_schedule", &SAS::GetTemperatureSchedule);
+   py_class.def("get_log_history", &SAS::GetLogHistory);
    py_class.def("get_seed", &SAS::GetSeed);
    py_class.def("get_index_list", &SAS::GetIndexList);
    py_class.def("get_samples", &SAS::GetSamples);
+   py_class.def("get_energy_history", &SAS::GetEnergyHistory);
+   py_class.def("get_temperature_history", &SAS::GetTemperatureHistory);
    py_class.def("calculate_energies", &SAS::CalculateEnergies);
    py_class.def("sample", py::overload_cast<>(&SAS::Sample));
    py_class.def("sample", py::overload_cast<const std::uint64_t>(&SAS::Sample), "seed"_a);
