@@ -78,5 +78,75 @@ TEST(Sampler, SASamplerOperationBinaryPolynomial) {
 
 }
 
+TEST(Sampler, SASamplerHistoryBinaryPolynomial) {
+
+   using FloatType = double;
+   using BPM = graph::BinaryPolynomialModel<FloatType>;
+
+   const std::vector<std::vector<typename BPM::IndexType>> key_list = {
+      {0}, {1}, {2}, {0, 1}, {1, 2}, {0, 1, 2}
+   };
+   const std::vector<FloatType> value_list = {
+      1.0, -2.0, 0.5, -1.5, 2.5, -0.75
+   };
+   const auto model = BPM{key_list, value_list};
+
+   constexpr std::int32_t num_reads = 3;
+   constexpr std::int32_t num_sweeps = 7;
+   constexpr std::uint64_t seed = 12345;
+   constexpr FloatType beta_min = 0.5;
+   constexpr FloatType beta_max = 2.0;
+
+   auto sa_sampler = sampler::SASampler{model};
+   sa_sampler.SetNumReads(num_reads);
+   sa_sampler.SetNumSweeps(num_sweeps);
+   sa_sampler.SetNumThreads(2);
+   sa_sampler.SetBetaMin(beta_min);
+   sa_sampler.SetBetaMax(beta_max);
+   sa_sampler.SetRandomNumberEngine(algorithm::RandomNumberEngine::XORSHIFT);
+   sa_sampler.SetUpdateMethod(algorithm::UpdateMethod::METROPOLIS);
+   sa_sampler.SetTemperatureSchedule(utility::TemperatureSchedule::LINEAR);
+
+   EXPECT_FALSE(sa_sampler.GetLogHistory());
+   sa_sampler.Sample(seed);
+   const auto samples_without_history = sa_sampler.GetSamples();
+   const auto energies_without_history = sa_sampler.CalculateEnergies();
+   EXPECT_TRUE(sa_sampler.GetEnergyHistory().empty());
+   EXPECT_TRUE(sa_sampler.GetTemperatureHistory().empty());
+
+   sa_sampler.SetLogHistory(true);
+   EXPECT_TRUE(sa_sampler.GetLogHistory());
+   sa_sampler.Sample(seed);
+
+   const auto &energy_history = sa_sampler.GetEnergyHistory();
+   const auto &temperature_history = sa_sampler.GetTemperatureHistory();
+   const auto energies = sa_sampler.CalculateEnergies();
+
+   EXPECT_EQ(sa_sampler.GetSamples(), samples_without_history);
+   EXPECT_EQ(energies, energies_without_history);
+   ASSERT_EQ(energy_history.size(), static_cast<std::size_t>(num_reads));
+   ASSERT_EQ(temperature_history.size(), static_cast<std::size_t>(num_reads));
+   ASSERT_EQ(energies.size(), static_cast<std::size_t>(num_reads));
+   for (std::int32_t read = 0; read < num_reads; ++read) {
+      ASSERT_EQ(energy_history[read].size(),
+                static_cast<std::size_t>(num_sweeps));
+      ASSERT_EQ(temperature_history[read].size(),
+                static_cast<std::size_t>(num_sweeps));
+      EXPECT_NEAR(temperature_history[read].front(), 1.0/beta_min, 1e-12);
+      EXPECT_NEAR(temperature_history[read].back(), 1.0/beta_max, 1e-12);
+      EXPECT_NEAR(energy_history[read].back(), energies[read], 1e-12);
+      EXPECT_EQ(temperature_history[read], temperature_history.front());
+   }
+
+   sa_sampler.SetLogHistory(false);
+   EXPECT_FALSE(sa_sampler.GetLogHistory());
+   sa_sampler.Sample(seed);
+
+   EXPECT_EQ(sa_sampler.GetSamples(), samples_without_history);
+   EXPECT_EQ(sa_sampler.CalculateEnergies(), energies_without_history);
+   EXPECT_TRUE(sa_sampler.GetEnergyHistory().empty());
+   EXPECT_TRUE(sa_sampler.GetTemperatureHistory().empty());
+}
+
 }
 }

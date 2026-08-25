@@ -337,13 +337,51 @@ struct SingleSpinFlip<system::ClassicalIsingPolynomial<GraphType>> {
 };
 
 
-template<class SystemType, typename RandType>
-void SingleFlipUpdater(SystemType *system,
-                       const std::int32_t num_sweeps,
-                       const std::vector<typename SystemType::ValueType> &beta_list,
-                       const typename RandType::result_type seed,
-                       const algorithm::UpdateMethod update_metod) {
-   
+struct NoHistory {
+   static constexpr bool enabled = false;
+};
+
+template<class ValueType>
+class HistoryRecorder {
+public:
+   static constexpr bool enabled = true;
+
+   HistoryRecorder(const ValueType initial_energy,
+                   const std::int32_t num_sweeps,
+                   std::vector<ValueType> &energy_history,
+                   std::vector<ValueType> &temperature_history):
+      current_energy_(initial_energy),
+      energy_history_(energy_history),
+      temperature_history_(temperature_history) {
+      energy_history_.clear();
+      energy_history_.reserve(num_sweeps);
+      temperature_history_.clear();
+      temperature_history_.reserve(num_sweeps);
+   }
+
+   void AddEnergyDifference(const ValueType delta_energy) {
+      current_energy_ += delta_energy;
+   }
+
+   void RecordSweep(const ValueType beta) {
+      energy_history_.push_back(current_energy_);
+      temperature_history_.push_back(static_cast<ValueType>(1)/beta);
+   }
+
+private:
+   ValueType current_energy_;
+   std::vector<ValueType> &energy_history_;
+   std::vector<ValueType> &temperature_history_;
+};
+
+template<class SystemType, typename RandType, class HistoryPolicy>
+void SingleFlipUpdaterImpl(SystemType *system,
+                           const std::int32_t num_sweeps,
+                           const std::vector<typename SystemType::ValueType> &beta_list,
+                           const typename RandType::result_type seed,
+                           const algorithm::UpdateMethod update_metod,
+                           HistoryPolicy &history_policy) {
+
    const std::int32_t system_size = system->GetSystemSize();
    
    // Set random number engine
@@ -358,7 +396,13 @@ void SingleFlipUpdater(SystemType *system,
             const auto delta_energy = system->GetEnergyDifference(i);
             if (delta_energy <= 0 || std::exp(-beta*delta_energy) > dist_real(random_number_engine)) {
                system->Flip(i);
+               if constexpr (HistoryPolicy::enabled) {
+                  history_policy.AddEnergyDifference(delta_energy);
+               }
             }
+         }
+         if constexpr (HistoryPolicy::enabled) {
+            history_policy.RecordSweep(beta);
          }
       }
    }
@@ -370,13 +414,49 @@ void SingleFlipUpdater(SystemType *system,
             const auto delta_energy = system->GetEnergyDifference(i);
             if (1/(1 + std::exp(beta*delta_energy)) > dist_real(random_number_engine)) {
                system->Flip(i);
+               if constexpr (HistoryPolicy::enabled) {
+                  history_policy.AddEnergyDifference(delta_energy);
+               }
             }
+         }
+         if constexpr (HistoryPolicy::enabled) {
+            history_policy.RecordSweep(beta);
          }
       }
    }
    else {
       throw std::runtime_error("Unknown UpdateMethod");
    }
+}
+
+template<class SystemType, typename RandType>
+void SingleFlipUpdater(SystemType *system,
+                       const std::int32_t num_sweeps,
+                       const std::vector<typename SystemType::ValueType> &beta_list,
+                       const typename RandType::result_type seed,
+                       const algorithm::UpdateMethod update_metod) {
+
+   NoHistory no_history;
+   SingleFlipUpdaterImpl<SystemType, RandType>(
+      system, num_sweeps, beta_list, seed, update_metod, no_history);
+}
+
+template<class SystemType, typename RandType>
+void SingleFlipUpdater(SystemType *system,
+                       const std::int32_t num_sweeps,
+                       const std::vector<typename SystemType::ValueType> &beta_list,
+                       const typename RandType::result_type seed,
+                       const algorithm::UpdateMethod update_metod,
+                       const typename SystemType::ValueType initial_energy,
+                       std::vector<typename SystemType::ValueType> &energy_history,
+                       std::vector<typename SystemType::ValueType> &temperature_history) {
+
+   using ValueType = typename SystemType::ValueType;
+
+   HistoryRecorder<ValueType> history_recorder{
+      initial_energy, num_sweeps, energy_history, temperature_history};
+   SingleFlipUpdaterImpl<SystemType, RandType>(
+      system, num_sweeps, beta_list, seed, update_metod, history_recorder);
 }
 
 } // namespace updater

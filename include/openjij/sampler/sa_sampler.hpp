@@ -109,6 +109,12 @@ public:
    void SetTemperatureSchedule(const utility::TemperatureSchedule schedule) {
       schedule_ = schedule;
    }
+
+   //! @brief Set whether to record the energy and temperature after each sweep.
+   //! @param log_history If true, record the sampling history.
+   void SetLogHistory(const bool log_history) {
+      log_history_ = log_history;
+   }
          
    //! @brief Get the model.
    //! @return The model.
@@ -163,6 +169,12 @@ public:
    utility::TemperatureSchedule GetTemperatureSchedule() const {
       return schedule_;
    }
+
+   //! @brief Get whether the sampling history is recorded.
+   //! @return True if the sampling history is recorded.
+   bool GetLogHistory() const {
+      return log_history_;
+   }
    
    //! @brief Get the seed to be used in the calculation.
    //! @return The seed.
@@ -178,6 +190,18 @@ public:
    //! @return The samples.
    const std::vector<std::vector<VariableType>> &GetSamples() const {
       return samples_;
+   }
+
+   //! @brief Get the energy history for each read.
+   //! @return Energy values recorded after each sweep.
+   const std::vector<std::vector<ValueType>> &GetEnergyHistory() const {
+      return history_available_ ? energy_history_ : EmptyHistory();
+   }
+
+   //! @brief Get the temperature history for each read.
+   //! @return Temperature values recorded after each sweep.
+   const std::vector<std::vector<ValueType>> &GetTemperatureHistory() const {
+      return history_available_ ? temperature_history_ : EmptyHistory();
    }
    
    std::vector<ValueType> CalculateEnergies() const {
@@ -213,18 +237,15 @@ public:
       samples_.clear();
       samples_.shrink_to_fit();
       samples_.resize(num_reads_);
-            
-      if (random_number_engine_ == algorithm::RandomNumberEngine::XORSHIFT) {
-         TemplateSampler<system::SASystem<ModelType, utility::Xorshift>, utility::Xorshift>();
-      }
-      else if (random_number_engine_ == algorithm::RandomNumberEngine::MT) {
-         TemplateSampler<system::SASystem<ModelType, std::mt19937>, std::mt19937>();
-      }
-      else if (random_number_engine_ == algorithm::RandomNumberEngine::MT_64) {
-         TemplateSampler<system::SASystem<ModelType, std::mt19937_64>, std::mt19937_64>();
-      }
-      else {
-         throw std::runtime_error("Unknown RandomNumberEngine");
+
+      history_available_ = false;
+      if (log_history_) {
+         energy_history_.resize(num_reads_);
+         temperature_history_.resize(num_reads_);
+         DispatchSampler<true>();
+         history_available_ = true;
+      } else {
+         DispatchSampler<false>();
       }
 
    }
@@ -256,12 +277,29 @@ private:
    
    //! @brief Cooling schedule.
    utility::TemperatureSchedule schedule_ = utility::TemperatureSchedule::GEOMETRIC;
+
+   //! @brief Whether to record the energy and temperature after each sweep.
+   bool log_history_ = false;
+
+   //! @brief Whether the stored histories belong to the latest sampling run.
+   bool history_available_ = false;
    
    //! @brief The seed to be used in the calculation.
    std::uint64_t seed_ = std::random_device()();
    
    //! @brief The samples.
    std::vector<std::vector<VariableType>> samples_;
+
+   //! @brief The energy history for each read.
+   std::vector<std::vector<ValueType>> energy_history_;
+
+   //! @brief The temperature history for each read.
+   std::vector<std::vector<ValueType>> temperature_history_;
+
+   static const std::vector<std::vector<ValueType>> &EmptyHistory() {
+      static const std::vector<std::vector<ValueType>> empty_history;
+      return empty_history;
+   }
    
    template<typename RandType>
    std::vector<std::pair<typename RandType::result_type, typename RandType::result_type>>
@@ -277,7 +315,29 @@ private:
       return seed_pair_list;
    }
    
-   template<class SystemType, class RandType>
+   template<bool LogHistory>
+   void DispatchSampler() {
+      if (random_number_engine_ == algorithm::RandomNumberEngine::XORSHIFT) {
+         TemplateSampler<LogHistory,
+                         system::SASystem<ModelType, utility::Xorshift>,
+                         utility::Xorshift>();
+      }
+      else if (random_number_engine_ == algorithm::RandomNumberEngine::MT) {
+         TemplateSampler<LogHistory,
+                         system::SASystem<ModelType, std::mt19937>,
+                         std::mt19937>();
+      }
+      else if (random_number_engine_ == algorithm::RandomNumberEngine::MT_64) {
+         TemplateSampler<LogHistory,
+                         system::SASystem<ModelType, std::mt19937_64>,
+                         std::mt19937_64>();
+      }
+      else {
+         throw std::runtime_error("Unknown RandomNumberEngine");
+      }
+   }
+
+   template<bool LogHistory, class SystemType, class RandType>
    void TemplateSampler() {
       const auto seed_pair_list = GenerateSeedPairList<RandType>(static_cast<typename RandType::result_type>(seed_), num_reads_);
       std::vector<ValueType> beta_list = utility::GenerateBetaList(schedule_, beta_min_, beta_max_, num_sweeps_);
@@ -285,7 +345,18 @@ private:
 #pragma omp parallel for schedule(guided) num_threads(num_threads_)
       for (std::int32_t i = 0; i < num_reads_; ++i) {
          auto system = SystemType{model_, seed_pair_list[i].first};
-         updater::SingleFlipUpdater<SystemType, RandType>(&system, num_sweeps_, beta_list, seed_pair_list[i].second, update_method_);
+         if constexpr (LogHistory) {
+            const ValueType initial_energy =
+               model_.CalculateEnergy(system.ExtractSample());
+            updater::SingleFlipUpdater<SystemType, RandType>(
+               &system, num_sweeps_, beta_list, seed_pair_list[i].second,
+               update_method_, initial_energy, energy_history_[i],
+               temperature_history_[i]);
+         } else {
+            updater::SingleFlipUpdater<SystemType, RandType>(
+               &system, num_sweeps_, beta_list, seed_pair_list[i].second,
+               update_method_);
+         }
          samples_[i] = system.ExtractSample();
       }
    }

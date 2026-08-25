@@ -497,6 +497,7 @@ class SASampler(BaseSampler):
         random_number_engine: str = "XORSHIFT",
         seed: Optional[int] = None,
         temperature_schedule: str = "GEOMETRIC",
+        log_history: bool = False,
     ):  
         """Sampling from higher order unconstrained binary optimization.
 
@@ -512,6 +513,12 @@ class SASampler(BaseSampler):
             random_number_engine (str, optional): Random number engine. One can choose "XORSHIFT", "MT", or "MT_64". Defaults to "XORSHIFT".            
             seed (int, optional): seed for Monte Carlo algorithm. Defaults to None.
             temperature_schedule (str, optional): Temperature schedule. One can choose "LINEAR", "GEOMETRIC". Defaults to "GEOMETRIC".
+            log_history (bool, optional): If True, records the energy and temperature after each sweep in
+                ``response.info["log"]``. The arrays have shape ``(num_reads, num_sweeps)`` and do not include
+                the initial state. This is supported for dictionary inputs with the "METROPOLIS", "HEAT_BATH",
+                or "single spin flip" updater; it is not supported by the legacy ``sample_hubo`` path used for
+                polynomial-model inputs and the "k-local" updater. On the supported path, False returns empty
+                history arrays with shape ``(num_reads, 0)``. Defaults to False.
 
         Returns:
             :class:`openjij.sampler.response.Response`: results
@@ -530,6 +537,11 @@ class SASampler(BaseSampler):
 
 
         if updater=="k-local" or not isinstance(J, dict):
+            if log_history:
+                raise NotImplementedError(
+                    "log_history is only supported for dictionary inputs with "
+                    "the METROPOLIS, HEAT_BATH, or single spin flip updater."
+                )
             # To preserve the correspondence with the old version.
             if updater=="METROPOLIS":
                 updater="single spin flip"
@@ -561,7 +573,8 @@ class SASampler(BaseSampler):
                 update_method=updater,
                 random_number_engine=random_number_engine,
                 seed=seed,
-                temperature_schedule=temperature_schedule
+                temperature_schedule=temperature_schedule,
+                log_history=log_history,
             )
     
     def _base_integer_sampler(
