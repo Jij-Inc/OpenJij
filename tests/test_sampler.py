@@ -213,6 +213,17 @@ class TestSamplers(unittest.TestCase):
                             )
                         np.testing.assert_array_equal(scaled.record.sample, reference.record.sample)
 
+    def test_sa_automatic_beta_max_leaves_room_for_cooling(self):
+        # Strong local fields and unequal couplings can leave the final beta
+        # barely above the initial beta for the default sweep count.
+        qubo = {(1, 1): 10.0, (0, 1): 1.0, (1, 2): -5.0}
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                response = sampler.sample_qubo(qubo, seed=42, sparse=sparse)
+                schedule = response.info["schedule"]
+                self.assertGreaterEqual(schedule["beta_max"], 10.0 * schedule["beta_min"])
+
     def test_sa_preserves_explicit_beta_when_estimating_other_endpoint(self):
         qubo = {(0, 0): -1.0, (0, 1): 0.25, (1, 1): 0.5}
         sampler = oj.SASampler()

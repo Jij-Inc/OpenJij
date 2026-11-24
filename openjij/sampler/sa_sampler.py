@@ -975,9 +975,8 @@ def geometric_ising_beta_schedule(
             beta_max = -np.log(prob_final) / _dE / last_step
 
         beta_max = (beta_max * rate_correction) / energy_scale
-
-        if beta_max < beta_min:
-            beta_max = beta_min * 10.0
+        # Leave room for cooling even if the estimate is just above beta_min.
+        beta_max = max(beta_max, beta_min * 10.0)
 
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
     # set schedule to cxxjij
