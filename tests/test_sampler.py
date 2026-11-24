@@ -176,6 +176,51 @@ class TestSamplers(unittest.TestCase):
         self.assertEqual(len(res.states), 100)
         self.assertTrue(all(isinstance(energy, (int, float)) for energy in res.energies))
 
+    def test_sa_seed_reproduces_batch_with_distinct_reads(self):
+        qubo = {(i, i): 1.0 for i in range(32)}
+        sampler = oj.SASampler()
+        # Isolate random initialization, then isolate the updater RNG.
+        for initial_state, sweeps in [(None, 0), ([0] * 32, 1)]:
+            with self.subTest(random_initial_state=initial_state is None):
+                parameters = {
+                    "seed": 42,
+                    "initial_state": initial_state,
+                    "schedule": [(0.5, sweeps)],
+                }
+                single = sampler.sample_qubo(qubo, num_reads=1, **parameters)
+                batch = sampler.sample_qubo(qubo, num_reads=10, **parameters)
+                repeated = sampler.sample_qubo(qubo, num_reads=10, **parameters)
+                np.testing.assert_array_equal(batch.record.sample, repeated.record.sample)
+                np.testing.assert_array_equal(batch.record.sample[:1], single.record.sample)
+                self.assertGreater(len(np.unique(batch.record.sample, axis=0)), 1)
+
+    def test_sa_automatic_beta_follows_qubo_scale(self):
+        for sparse in (False, True):
+            for qubo in (
+                {(0, 0): -1.0, (1, 1): 0.5},
+                {(0, 0): -1.0, (0, 1): 0.25, (1, 1): 0.5},
+            ):
+                with self.subTest(sparse=sparse, qubo=qubo):
+                    sampler = oj.SASampler()
+                    reference = sampler.sample_qubo(qubo, seed=42, sparse=sparse)
+                    for scale in (1e-12, 1e12):
+                        scaled_qubo = {key: bias * scale for key, bias in qubo.items()}
+                        scaled = sampler.sample_qubo(scaled_qubo, seed=42, sparse=sparse)
+                        for endpoint in ("beta_min", "beta_max"):
+                            np.testing.assert_allclose(
+                                scaled.info["schedule"][endpoint] * scale,
+                                reference.info["schedule"][endpoint],
+                            )
+                        np.testing.assert_array_equal(scaled.record.sample, reference.record.sample)
+
+    def test_sa_preserves_explicit_beta_when_estimating_other_endpoint(self):
+        qubo = {(0, 0): -1.0, (0, 1): 0.25, (1, 1): 0.5}
+        sampler = oj.SASampler()
+        for endpoint, beta in [("beta_min", 0.5), ("beta_max", 10.0)]:
+            with self.subTest(endpoint=endpoint):
+                response = sampler.sample_qubo(qubo, seed=42, **{endpoint: beta})
+                self.assertEqual(response.info["schedule"][endpoint], beta)
+
     def test_sa_with_negative_interactions(self):
         # sa with negative interactions
         sampler = oj.SASampler()

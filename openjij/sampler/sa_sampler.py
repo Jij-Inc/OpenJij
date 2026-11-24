@@ -163,7 +163,7 @@ class SASampler(BaseSampler):
             updater(str): updater algorithm
             sparse (bool): use sparse matrix or not.
             reinitialize_state (bool): if true reinitialize state for each run
-            seed (int): seed for Monte Carlo algorithm
+            seed (int): seed for reproducible batches with a distinct random seed per read
         Returns:
             :class:`openjij.sampler.response.Response`: results
 
@@ -250,10 +250,10 @@ class SASampler(BaseSampler):
         # make init state generator --------------------------------
         if initial_state is None:
 
-            def _generate_init_state():
+            def _generate_init_state(read_seed=seed):
                 return (
-                    ising_graph.gen_spin(seed)
-                    if seed is not None
+                    ising_graph.gen_spin(read_seed)
+                    if read_seed is not None
                     else ising_graph.gen_spin()
                 )
 
@@ -306,7 +306,7 @@ class SASampler(BaseSampler):
                     )
                 )
 
-            def _generate_init_state():
+            def _generate_init_state(read_seed=seed):
                 return np.array(_init_state)
 
         # -------------------------------- make init state generator
@@ -320,8 +320,23 @@ class SASampler(BaseSampler):
             _generate_init_state(), ising_graph
         )
         # ------------------------------------------- choose updater
+        read_seeds = None
+        if seed is not None and self._params["num_reads"] > 1:
+            # Xorshift takes a 32-bit seed. An odd step visits each seed once
+            # before wrapping, starting with the original seed for the first read.
+            seed_step = 2 * int(np.random.default_rng(seed).integers(2**31)) + 1
+            read_seeds = (
+                (int(seed) + read * seed_step) % 2**32
+                for read in range(self._params["num_reads"])
+            )
         response = self._cxxjij_sampling(
-            model, _generate_init_state, algorithm, sa_system, reinitialize_state, seed
+            model,
+            _generate_init_state,
+            algorithm,
+            sa_system,
+            reinitialize_state,
+            seed,
+            read_seeds=read_seeds,
         )
 
         response.info["schedule"] = self.schedule_info
@@ -869,52 +884,54 @@ def geometric_ising_beta_schedule(
         list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
     """
 
-    # Set seed
-    if seed is not None:
-        np.random.seed(seed)
-
-    THRESHOLD = 1e-8
+    threshold = 1e-8
+    energy_scale = 1.0
     dE_max = 1.0
     dE_min = 1.0
-    ising_interaction = cxxgraph.get_interactions()
     rate_dE = 0.5
+    n = cxxgraph.size() + 1
 
     if beta_min is None or beta_max is None:
-        # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
-        if ising_interaction.shape[0] <= 1:
-            dE_max = 1
-            dE_min = 1
+        # Exclude the auxiliary row (including its unit diagonal), but keep
+        # the last column of local fields. Estimate beta in normalized units.
+        interactions = cxxgraph.get_interactions()[:-1, :]
+        is_dense = isinstance(interactions, np.ndarray)
+        if is_dense:
+            interactions = interactions.copy()
+            coefficients = interactions
         else:
-            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
-            random_spin[-1, :] = 1  # last element is bias term
+            coefficients = interactions.data
 
-            # Calculate quadratic and linear term energy difference separately
-            dE_quad = (ising_interaction[:-1, :-1] @ random_spin[:-1, :] * (-2 * random_spin[:-1, :]))
-            if isinstance(ising_interaction, np.ndarray):
-                dE_linear = (ising_interaction[:-1, -1][:, np.newaxis] * random_spin[:-1])
-            else:
-                dE_linear = (ising_interaction[:-1, -1].toarray() * random_spin[:-1])
+        abs_coefficients = np.abs(coefficients)
+        energy_scale = float(abs_coefficients.max(initial=0.0)) or 1.0
+        coefficients /= energy_scale
+        abs_coefficients /= energy_scale
+
+        if n > 1:
+            rng = np.random if seed is None else np.random.RandomState(seed)
+            random_spin = rng.choice([-1, 1], size=(n, 2))[:-1]
+            dE_quad = (interactions[:, :-1] @ random_spin) * (-2 * random_spin)
+            local_fields = interactions[:, -1:]
+            if not is_dense:
+                local_fields = local_fields.toarray()
 
             dE_quad_abs = np.abs(dE_quad)
-            # Recalculate the maximum rate of change in energy if the absolute value of dE_quad is above the threshold
-            if np.any(dE_quad_abs > THRESHOLD):
-                rate_dE = np.max(np.abs(dE_linear[dE_quad_abs > THRESHOLD]) /(dE_quad_abs[dE_quad_abs > THRESHOLD].mean() + THRESHOLD))
+            nonzero_quad = dE_quad_abs > threshold
+            if np.any(nonzero_quad):
+                rate_dE = np.max(np.abs(local_fields * random_spin)[nonzero_quad]) / (
+                    dE_quad_abs[nonzero_quad].mean() + threshold
+                )
 
-            dE = dE_quad
-            dE_positive = dE[dE > THRESHOLD]
-
-            if len(dE_positive) == 0:
-                dE_min = 1
+            dE_positive = dE_quad[dE_quad > threshold]
+            if dE_positive.size == 0:
                 dE_max = 1.1
             else:
-                dE_max = np.median(dE_positive, axis=0).mean()
-                dE_min = np.min(dE_positive, axis=0).mean()
+                dE_max = np.median(dE_positive)
+                dE_min = np.min(dE_positive)
 
-
-    n = ising_interaction.shape[0]  # n+1
-
-    prob_init = 9/10 - 8/10 * np.tanh(rate_dE/50) + THRESHOLD
+    prob_init = 0.9 - 0.8 * np.tanh(rate_dE / 50) + threshold
     prob_final = 1 / 1000
+    rate_correction = max(1.0, rate_dE)
 
     if beta_min is None:
         p_init = prob_init
@@ -923,7 +940,7 @@ def geometric_ising_beta_schedule(
         beta_low, beta_high = -np.log(prob_init) / dE_max, -np.log(prob_init) / dE_min
         tolerance = 1e-8
         max_iterations = 5
-        for iteration in range(max_iterations):
+        for _ in range(max_iterations):
             _beta = (beta_low + beta_high) / 2
             f = 2 * _beta * p_init - np.exp(-_beta * dE_min) + np.exp(-_beta * dE_max)
             if abs(f) < tolerance:
@@ -936,11 +953,11 @@ def geometric_ising_beta_schedule(
 
         beta_min_min = beta_min * 0.8
         beta_min = beta_min_min + (beta_min * 1.5 - beta_min_min) * np.tanh(num_sweeps / n)
+        beta_min = (beta_min * rate_correction) / energy_scale
 
     if beta_max is None:
-        int_abs = np.abs(ising_interaction)
-        int_min = np.min(int_abs[int_abs > THRESHOLD])
-
+        significant = abs_coefficients[abs_coefficients > threshold]
+        int_min = significant.min() if significant.size else 1.0
         int_min = max(int_min, dE_min / 10.0)
 
         beta_max_int = -np.log(prob_final) / int_min
@@ -957,12 +974,10 @@ def geometric_ising_beta_schedule(
             _dE = max(dE_min, int_min)
             beta_max = -np.log(prob_final) / _dE / last_step
 
+        beta_max = (beta_max * rate_correction) / energy_scale
+
         if beta_max < beta_min:
             beta_max = beta_min * 10.0
-
-    if rate_dE > 1:
-        beta_min *= rate_dE
-        beta_max *= rate_dE
 
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
     # set schedule to cxxjij
