@@ -176,6 +176,191 @@ class TestSamplers(unittest.TestCase):
         self.assertEqual(len(res.states), 100)
         self.assertTrue(all(isinstance(energy, (int, float)) for energy in res.energies))
 
+    def test_sa_seed_reproduces_batch_with_distinct_reads(self):
+        qubo = {(i, i): 1.0 for i in range(32)}
+        sampler = oj.SASampler()
+        # Isolate random initialization, then isolate the updater RNG.
+        for initial_state, sweeps in [(None, 0), ([0] * 32, 1)]:
+            with self.subTest(random_initial_state=initial_state is None):
+                parameters = {
+                    "seed": 42,
+                    "initial_state": initial_state,
+                    "schedule": [(0.5, sweeps)],
+                }
+                single = sampler.sample_qubo(qubo, num_reads=1, **parameters)
+                batch = sampler.sample_qubo(qubo, num_reads=10, **parameters)
+                repeated = sampler.sample_qubo(qubo, num_reads=10, **parameters)
+                np.testing.assert_array_equal(batch.record.sample, repeated.record.sample)
+                np.testing.assert_array_equal(batch.record.sample[:1], single.record.sample)
+                self.assertGreater(len(np.unique(batch.record.sample, axis=0)), 1)
+
+    def test_sa_automatic_beta_follows_qubo_scale(self):
+        for sparse in (False, True):
+            for qubo in (
+                {(0, 0): -1.0, (1, 1): 0.5},
+                {(0, 0): -1.0, (0, 1): 0.25, (1, 1): 0.5},
+            ):
+                with self.subTest(sparse=sparse, qubo=qubo):
+                    sampler = oj.SASampler()
+                    reference = sampler.sample_qubo(qubo, seed=42, sparse=sparse)
+                    for scale in (1e-12, 1e12):
+                        scaled_qubo = {key: bias * scale for key, bias in qubo.items()}
+                        scaled = sampler.sample_qubo(scaled_qubo, seed=42, sparse=sparse)
+                        for endpoint in ("beta_min", "beta_max"):
+                            np.testing.assert_allclose(
+                                scaled.info["schedule"][endpoint] * scale,
+                                reference.info["schedule"][endpoint],
+                            )
+                        np.testing.assert_array_equal(scaled.record.sample, reference.record.sample)
+
+    def test_sa_automatic_beta_max_leaves_room_for_cooling(self):
+        # Strong local fields and unequal couplings can leave the final beta
+        # barely above the initial beta for the default sweep count.
+        qubo = {(1, 1): 10.0, (0, 1): 1.0, (1, 2): -5.0}
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                response = sampler.sample_qubo(qubo, seed=42, sparse=sparse)
+                schedule = response.info["schedule"]
+                self.assertGreaterEqual(schedule["beta_max"], 10.0 * schedule["beta_min"])
+
+    def test_sa_automatic_beta_range_follows_coefficient_statistics(self):
+        # sigma = (sqrt(5), sqrt(4.25), 0.5); smallest coefficient per spin = (1, 0.5, 0.5)
+        h = {0: 1.0}
+        J = {(0, 1): -2.0, (1, 2): 0.5}
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                schedule = [
+                    sampler.sample_ising(h, J, seed=seed, sparse=sparse).info["schedule"]
+                    for seed in (1, 2)
+                ]
+                sigma_quantile = 0.2 * np.sqrt(4.25) + 0.8 * np.sqrt(5)
+                np.testing.assert_allclose(schedule[0]["beta_min"], np.log(2) / sigma_quantile)
+                # Two spins share the smallest coefficient 0.5.
+                np.testing.assert_allclose(schedule[0]["beta_max"], np.log(2 / 0.01))
+                # The estimate is deterministic: it does not depend on the seed.
+                self.assertEqual(schedule[0], schedule[1])
+
+    def test_sa_default_schedule_uses_quantiles_and_cools_tail(self):
+        fields = {0: 1000.0, 1: 1e-6} | {i: 1.0 for i in range(2, 20)}
+        couplings = {(i, i + 1): 10.0 for i in range(0, 20, 2)}
+        beta_min = np.log(2) / np.sqrt(101)
+        beta_main = np.log(100) / 2
+        beta_final = np.log(100) / (2e-6)
+        expected_betas = np.concatenate(
+            (np.geomspace(beta_min, beta_main, 90), np.geomspace(beta_main, beta_final, 11)[1:])
+        )
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                response = sampler.sample_ising(fields, couplings, seed=42, sparse=sparse, num_sweeps=100)
+                schedule = sampler._params["schedule"]
+                np.testing.assert_allclose(response.info["schedule"]["beta_max"], beta_final)
+                self.assertEqual([step.one_mc_step for step in schedule], [1] * 100)
+                np.testing.assert_allclose([step.updater_parameter.beta for step in schedule], expected_betas)
+
+    def test_sa_default_schedule_respects_sweep_budget_and_explicit_beta_max(self):
+        fields = {0: 1e-6} | {i: 1.0 for i in range(1, 20)}
+        sampler = oj.SASampler()
+        for sweeps in (0, 1, 2, 3, 10_003):
+            with self.subTest(sweeps=sweeps):
+                response = sampler.sample_ising(fields, {}, seed=42, num_sweeps=sweeps)
+                schedule = sampler._params["schedule"]
+                self.assertEqual(sum(step.one_mc_step for step in schedule), sweeps)
+                if sweeps < 4:
+                    np.testing.assert_allclose(response.info["schedule"]["beta_max"], 10 * np.log(2))
+                else:
+                    self.assertLessEqual(len(schedule), 10_000)
+                    np.testing.assert_allclose(schedule[-1].updater_parameter.beta, np.log(100) / (2e-6))
+
+        response = sampler.sample_ising(fields, {}, seed=42, num_sweeps=100, beta_max=20.0)
+        self.assertEqual(response.info["schedule"]["beta_max"], 20.0)
+        np.testing.assert_allclose(
+            [step.updater_parameter.beta for step in sampler._params["schedule"]],
+            np.geomspace(np.log(2), 20.0, 100),
+        )
+
+    def test_sa_automatic_beta_ignores_qubo_cancellation_roundoff(self):
+        # The first spin's converted field is zero. The isolated spin has
+        # a real tiny field and must still set the cold endpoint.
+        qubo = {(0, 0): -3.0, (0, 1): 1.0, (0, 2): 5.0}
+        degree = 300
+        many_couplings = {(0, 0): -degree / 2} | {(0, i): 1.0 for i in range(1, degree + 1)}
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                for problem, scale in ((qubo, 1e-12), (many_couplings, 1e-100)):
+                    reference = sampler.sample_qubo(problem, sparse=sparse, num_sweeps=4)
+                    scaled_qubo = {key: bias * scale for key, bias in problem.items()}
+                    scaled = sampler.sample_qubo(scaled_qubo, sparse=sparse, num_sweeps=4)
+                    np.testing.assert_allclose(
+                        scaled.info["schedule"]["beta_max"] * scale,
+                        reference.info["schedule"]["beta_max"],
+                    )
+                weak_field = sampler.sample_qubo(qubo | {(3, 3): 1e-28}, sparse=sparse)
+                np.testing.assert_allclose(weak_field.info["schedule"]["beta_max"] * 1e-28, np.log(100))
+                weak_ising_field = sampler.sample_ising({0: 1e-28}, {(0, 1): 1.0}, sparse=sparse)
+                np.testing.assert_allclose(
+                    weak_ising_field.info["schedule"]["beta_max"] * 1e-28,
+                    np.log(100) / 2,
+                )
+
+    def test_sa_automatic_beta_handles_extreme_coefficient_scales(self):
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            for field in (1e-200, 1e200, 1e308):
+                with self.subTest(sparse=sparse, field=field):
+                    response = sampler.sample_ising({0: field}, {}, sparse=sparse, num_sweeps=4)
+                    schedule = response.info["schedule"]
+                    np.testing.assert_allclose(schedule["beta_min"] * field, np.log(2))
+                    np.testing.assert_allclose(schedule["beta_max"] * field, 10 * np.log(2))
+
+    def test_sa_initial_beta_uses_active_fields_when_needed(self):
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                # An outlier must not erase smaller RMS fields during scaling.
+                outlier = {0: 1e200} | {i: 1e-200 for i in range(1, 11)}
+                response = sampler.sample_ising(outlier, {}, sparse=sparse, num_sweeps=2)
+                np.testing.assert_allclose(response.info["schedule"]["beta_min"] * 1e-200, np.log(2))
+
+                # If the quantile is zero, use the active spins to estimate it.
+                isolated = {i: 0.0 for i in range(20)} | {20: 2.0}
+                response = sampler.sample_ising(isolated, {}, sparse=sparse, num_sweeps=2)
+                np.testing.assert_allclose(response.info["schedule"]["beta_min"], np.log(2) / 2)
+
+    def test_sa_automatic_beta_stays_finite_for_subnormal_coefficients(self):
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            for fields in ({0: 1e-310}, {0: 1e-310} | {i: 1.0 for i in range(1, 20)}):
+                with self.subTest(sparse=sparse, size=len(fields)):
+                    response = sampler.sample_ising(fields, {}, sparse=sparse, num_sweeps=100)
+                    betas = np.array([step.updater_parameter.beta for step in sampler._params["schedule"]])
+                    self.assertTrue(np.isfinite(betas).all())
+                    self.assertTrue(np.all(betas[:-1] <= betas[1:]))
+                    self.assertEqual(betas[-1], np.finfo(float).max)
+                    self.assertEqual(betas[-1], response.info["schedule"]["beta_max"])
+
+    def test_sa_preserves_explicit_beta_when_estimating_other_endpoint(self):
+        qubo = {(0, 0): -1.0, (0, 1): 0.25, (1, 1): 0.5}
+        sampler = oj.SASampler()
+        for endpoint, beta in [("beta_min", 0.5), ("beta_max", 10.0)]:
+            with self.subTest(endpoint=endpoint):
+                response = sampler.sample_qubo(qubo, seed=42, **{endpoint: beta})
+                self.assertEqual(response.info["schedule"][endpoint], beta)
+
+    def test_sa_estimated_beta_min_respects_explicit_beta_max(self):
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                response = sampler.sample_ising({0: 1e-12}, {}, beta_max=10.0, seed=42, sparse=sparse)
+                betas = [step.updater_parameter.beta for step in sampler._params["schedule"]]
+                self.assertEqual(response.info["schedule"]["beta_max"], 10.0)
+                self.assertLessEqual(response.info["schedule"]["beta_min"], 10.0)
+                self.assertEqual(betas[-1], 10.0)
+                self.assertTrue(np.all(np.diff(betas) >= 0))
+
     def test_sa_with_negative_interactions(self):
         # sa with negative interactions
         sampler = oj.SASampler()

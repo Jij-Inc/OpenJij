@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
@@ -166,15 +167,40 @@ ClassicalScheduleList
 make_classical_schedule_list(double beta_min, double beta_max,
                              std::size_t one_mc_step,
                              std::size_t num_call_updater) {
-  double r_beta = std::pow(beta_max / beta_min,
-                           1.0 / static_cast<double>(num_call_updater - 1));
-  double beta = beta_min;
-
   auto schedule_list = ClassicalScheduleList(num_call_updater);
+  const double ratio = beta_min == beta_max ? 1.0 : beta_max / beta_min;
+  if (num_call_updater > 1 && beta_min > 0.0 && beta_max > 0.0 &&
+      std::isfinite(beta_min) && std::isfinite(beta_max) &&
+      !std::isnormal(ratio)) {
+    // A ratio can overflow or lose precision even with finite endpoints.
+    const std::size_t last = num_call_updater - 1;
+    const double log_min = std::log(beta_min);
+    const double log_span = std::log(beta_max) - log_min;
+    for (std::size_t index = 0; index < num_call_updater; ++index) {
+      const double fraction =
+          static_cast<double>(index) / static_cast<double>(last);
+      auto &schedule = schedule_list[index];
+      schedule.one_mc_step = one_mc_step;
+      schedule.updater_parameter =
+          ClassicalUpdaterParameter(std::exp(log_min + fraction * log_span));
+    }
+    schedule_list.front().updater_parameter.beta = beta_min;
+    schedule_list.back().updater_parameter.beta = beta_max;
+    return schedule_list;
+  }
+
+  const double r_beta =
+      std::pow(ratio, 1.0 / static_cast<double>(num_call_updater - 1));
+  const auto [lower, upper] = std::minmax(beta_min, beta_max);
+  double beta = beta_min;
   for (auto &schedule : schedule_list) {
     schedule.one_mc_step = one_mc_step;
     schedule.updater_parameter = ClassicalUpdaterParameter(beta);
-    beta *= r_beta;
+    // Rounding in the step ratio can carry the accumulated beta past an endpoint.
+    beta = std::clamp(beta * r_beta, lower, upper);
+  }
+  if (num_call_updater > 1) {
+    schedule_list.back().updater_parameter.beta = beta_max;
   }
 
   return schedule_list;

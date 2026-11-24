@@ -27,6 +27,8 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <limits>
 
 // include OpenJij
 #include <openjij/graph/all.hpp>
@@ -59,6 +61,48 @@
 #include "graph/all.hpp"
 #include "result/all.hpp"
 #include "utility/all.hpp"
+
+TEST(ScheduleList, FiniteBetasAcrossExtremeRatios) {
+   for (const auto &[first, last] :
+        {std::pair{1e-150, 1e160}, std::pair{1e160, 1e-150}}) {
+      const auto schedule = openjij::utility::make_classical_schedule_list(first, last, 2, 5);
+      ASSERT_EQ(schedule.size(), 5u);
+      EXPECT_DOUBLE_EQ(schedule.front().updater_parameter.beta, first);
+      EXPECT_DOUBLE_EQ(schedule.back().updater_parameter.beta, last);
+      EXPECT_NEAR(schedule[2].updater_parameter.beta / 1e5, 1.0, 1e-12);
+      for (const auto &step : schedule) {
+         EXPECT_EQ(step.one_mc_step, 2u);
+         EXPECT_TRUE(std::isfinite(step.updater_parameter.beta));
+         EXPECT_GT(step.updater_parameter.beta, 0.0);
+      }
+   }
+}
+
+TEST(ScheduleList, EqualZeroEndpointsStayAtZero) {
+   const auto schedule = openjij::utility::make_classical_schedule_list(0.0, 0.0, 1, 4);
+   ASSERT_EQ(schedule.size(), 4u);
+   for (const auto &step : schedule) {
+      EXPECT_EQ(step.updater_parameter.beta, 0.0);
+   }
+}
+
+TEST(ScheduleList, BetasStayFiniteAndMonotoneNearSaturation) {
+   const double hot = std::log(2.0) / 3.85575917890534e-309;
+   const double cold = std::numeric_limits<double>::max();
+   for (const auto &[first, last] : {std::pair{hot, cold}, std::pair{cold, hot}}) {
+      const auto schedule = openjij::utility::make_classical_schedule_list(first, last, 1, 1000);
+      ASSERT_EQ(schedule.size(), 1000u);
+      EXPECT_EQ(schedule.front().updater_parameter.beta, first);
+      EXPECT_EQ(schedule.back().updater_parameter.beta, last);
+      double previous = first;
+      for (const auto &step : schedule) {
+         const double beta = step.updater_parameter.beta;
+         EXPECT_TRUE(std::isfinite(beta));
+         EXPECT_TRUE(first <= last ? previous <= beta : beta <= previous);
+         previous = beta;
+      }
+   }
+}
 
 std::int32_t main(std::int32_t argc, char **argv) {
    testing::InitGoogleTest(&argc, argv);

@@ -152,6 +152,10 @@ class SASampler(BaseSampler):
     ) -> "oj.sampler.response.Response":
         """Sample Ising model.
 
+        Automatic temperatures for single-spin updates use coefficient
+        quantiles and can include a colder tail. The reported ``beta_max``
+        is the final inverse temperature, including the tail when present.
+
         Args:
             bqm (openjij.model.model.BinaryQuadraticModel) binary quadratic model
             beta_min (float): minimal value of inverse temperature
@@ -163,7 +167,7 @@ class SASampler(BaseSampler):
             updater(str): updater algorithm
             sparse (bool): use sparse matrix or not.
             reinitialize_state (bool): if true reinitialize state for each run
-            seed (int): seed for Monte Carlo algorithm
+            seed (int): seed for reproducible batches with a distinct random seed per read
         Returns:
             :class:`openjij.sampler.response.Response`: results
 
@@ -234,6 +238,8 @@ class SASampler(BaseSampler):
                 beta_min=self._params["beta_min"],
                 num_sweeps=self._params["num_sweeps"],
                 seed=seed,
+                from_qubo=model.vartype == BINARY,
+                use_quantiles=_updater_name == "singlespinflip",
             )
             self.schedule_info = {
                 "beta_max": beta_range[0],
@@ -250,10 +256,10 @@ class SASampler(BaseSampler):
         # make init state generator --------------------------------
         if initial_state is None:
 
-            def _generate_init_state():
+            def _generate_init_state(read_seed=seed):
                 return (
-                    ising_graph.gen_spin(seed)
-                    if seed is not None
+                    ising_graph.gen_spin(read_seed)
+                    if read_seed is not None
                     else ising_graph.gen_spin()
                 )
 
@@ -306,7 +312,7 @@ class SASampler(BaseSampler):
                     )
                 )
 
-            def _generate_init_state():
+            def _generate_init_state(read_seed=seed):
                 return np.array(_init_state)
 
         # -------------------------------- make init state generator
@@ -320,8 +326,23 @@ class SASampler(BaseSampler):
             _generate_init_state(), ising_graph
         )
         # ------------------------------------------- choose updater
+        read_seeds = None
+        if seed is not None and self._params["num_reads"] > 1:
+            # Xorshift takes a 32-bit seed. An odd step visits each seed once
+            # before wrapping, starting with the original seed for the first read.
+            seed_step = 2 * int(np.random.default_rng(seed).integers(2**31)) + 1
+            read_seeds = (
+                (int(seed) + read * seed_step) % 2**32
+                for read in range(self._params["num_reads"])
+            )
         response = self._cxxjij_sampling(
-            model, _generate_init_state, algorithm, sa_system, reinitialize_state, seed
+            model,
+            _generate_init_state,
+            algorithm,
+            sa_system,
+            reinitialize_state,
+            seed,
+            read_seeds=read_seeds,
         )
 
         response.info["schedule"] = self.schedule_info
@@ -850,119 +871,191 @@ def geometric_hubo_beta_schedule(sa_system, beta_max, beta_min, num_sweeps, seed
     return schedule, [beta_max, beta_min]
 
 
+def _ising_beta_range_statistics(cxxgraph, *, from_qubo):
+    """Per-spin coefficient statistics of an Ising graph.
+
+    Returns:
+        Each spin's RMS local field in scaled units, the corresponding
+        per-spin scale, and each spin's smallest nonzero coefficient in
+        the original units. Spins with all-zero coefficients are omitted
+        from the last array.
+    """
+    n = cxxgraph.size()
+    if n == 0:
+        return np.empty(0), np.empty(0), np.empty(0)
+
+    # Rows of spins; the last column holds the local fields. The auxiliary
+    # last row (with its unit diagonal) is not part of the model.
+    coefficients = abs(cxxgraph.get_interactions()[:-1, :])
+    # A QUBO field is Q_ii / 2 plus the incident Ising couplings. Near
+    # cancellation, use a roundoff bound that grows with the number of
+    # terms added and their total magnitude.
+    field_roundoff = 2 * np.finfo(float).eps
+    if isinstance(coefficients, np.ndarray):
+        np.fill_diagonal(coefficients, 0.0)
+        if from_qubo:
+            fields = coefficients[:, -1]
+            couplings = coefficients[:, :-1]
+            degree = np.count_nonzero(couplings, axis=1)
+            tolerance = (couplings * field_roundoff).sum(axis=1) * (degree + 1)
+            fields[fields <= tolerance] = 0.0
+        min_coefficients = np.where(coefficients > 0, coefficients, np.inf).min(axis=1)
+        scales = coefficients.max(axis=1)
+        coefficients /= np.where(scales > 0, scales, 1.0)[:, np.newaxis]
+        sigma = np.sqrt(np.sum(coefficients**2, axis=1))
+    else:
+        coefficients = coefficients.tocsr()
+        coefficients.setdiag(0)
+        if from_qubo:
+            couplings = coefficients[:, :-1]
+            couplings.eliminate_zeros()
+            degree = np.diff(couplings.indptr)
+            tolerance = np.asarray(couplings.multiply(field_roundoff).sum(axis=1)).ravel() * (degree + 1)
+            rows = np.repeat(np.arange(n), np.diff(coefficients.indptr))
+            is_field = coefficients.indices == n
+            coefficients.data[is_field & (coefficients.data <= tolerance[rows])] = 0.0
+        coefficients.eliminate_zeros()
+        min_coefficients = np.full(n, np.inf)
+        scales = np.zeros(n)
+        row_sizes = np.diff(coefficients.indptr)
+        nonempty = row_sizes > 0
+        offsets = coefficients.indptr[:-1][nonempty]
+        min_coefficients[nonempty] = np.minimum.reduceat(coefficients.data, offsets)
+        scales[nonempty] = np.maximum.reduceat(coefficients.data, offsets)
+        coefficients.data /= np.repeat(scales, row_sizes)
+        sigma = np.sqrt(np.asarray(coefficients.multiply(coefficients).sum(axis=1)).ravel())
+
+    return sigma, scales, min_coefficients[np.isfinite(min_coefficients)]
+
+
+def _estimate_initial_beta(scaled_sigma, scales, quantile):
+    with np.errstate(over="ignore"):
+        sigma = scaled_sigma * scales
+    if not np.isfinite(sigma).all():
+        # Order fields in log space if their RMS exceeds the float range.
+        with np.errstate(divide="ignore"):
+            sigma = np.log(scaled_sigma) + np.log(scales)
+
+    rank = quantile * (scales.size - 1)
+    lower, upper = math.floor(rank), math.ceil(rank)
+    indices = np.argpartition(sigma, (lower, upper))[[lower, upper]]
+    scale = float(scales[indices].max())
+    if scale == 0.0:
+        # Isolated spins supply no temperature scale if both ranked fields are zero.
+        active = scales > 0
+        return _estimate_initial_beta(scaled_sigma[active], scales[active], quantile)
+
+    low, high = scaled_sigma[indices] * (scales[indices] / scale)
+    fraction = rank - lower
+    sigma_quantile = (1 - fraction) * low + fraction * high
+    return (math.log(2) / float(sigma_quantile)) / scale
+
+
+def _geometric_schedule_segment(beta_start, beta_end, num_sweeps, sweeps_per_beta, *, skip_start=False):
+    num_betas = (num_sweeps + sweeps_per_beta - 1) // sweeps_per_beta
+    schedule = cxxjij.utility.make_classical_schedule_list(
+        beta_min=beta_start,
+        beta_max=beta_end,
+        one_mc_step=sweeps_per_beta,
+        num_call_updater=num_betas + skip_start,
+    )
+    if skip_start:
+        schedule = schedule[1:]
+    if schedule:
+        schedule[-1].one_mc_step = num_sweeps - (num_betas - 1) * sweeps_per_beta
+        if num_betas > 1 or skip_start:
+            schedule[-1].updater_parameter.beta = beta_end
+    return schedule
+
+
 def geometric_ising_beta_schedule(
     cxxgraph: Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse],
     beta_max=None,
     beta_min=None,
     num_sweeps=1000,
     seed=None,
+    *,
+    from_qubo=False,
+    use_quantiles=True,
 ):
-    """Make geometric cooling beta schedule.
+    """Make a geometric cooling schedule with an optional colder tail.
+
+    For single-spin updates, estimate the start as ``ln 2 / Q_0.9(sigma)``,
+    where ``sigma_i = sqrt(h_i^2 + sum_j J_ij^2)``. The main interval ends
+    at ``ln 100 / (2 Q_0.1(m))``, floored at ten times the start. Here
+    ``m_i`` is the smallest nonzero coefficient touching spin ``i``.
+    Spins with no such coefficient are excluded from the cold statistics.
+
+    The tail endpoint is ``ln(N_min / 0.01) / (2 m_min)``. The minimum
+    group of ``N_min`` spins is counted with relative tolerance 1e-9.
+    When the tail endpoint is colder than the main interval, the final
+    10 percent of sweeps cool geometrically to it, provided there is
+    room for at least two sweeps in each interval. A supplied final
+    endpoint sets the end of a single geometric interval and caps an
+    automatically estimated starting beta.
+    Automatic endpoints that exceed float range use the largest finite beta.
+
+    The sampler omits fields within cancellation roundoff when it converts
+    a BINARY model to Ising. For a model supplied in SPIN form, every
+    nonzero coefficient contributes, including residue from an earlier
+    conversion.
 
     Args:
         cxxgraph (Union[openjij.cxxjij.graph.Dense, openjij.cxxjij.graph.CSRSparse]): Ising graph, must be either `Dense` or `CSRSparse`.
-        beta_max (float, optional): [description]. Defaults to None.
-        beta_min (float, optional): [description]. Defaults to None.
-        num_sweeps (int, optional): [description]. Defaults to 1000.
-        seed (int, optional): Seed for random number generation. Defaults to None.
+        beta_max (float, optional): final inverse temperature. Estimated if None.
+        beta_min (float, optional): initial inverse temperature. Estimated if None.
+        num_sweeps (int, optional): number of sweeps. Defaults to 1000.
+        seed (int, optional): unused. Kept for backward compatibility.
+        from_qubo (bool, optional): ignore local fields within the roundoff
+            of converting a binary model to Ising.
+        use_quantiles (bool, optional): use the single-spin schedule.
+            Cluster updates use the maximum RMS field and smallest
+            nonzero coefficient for a single geometric interval.
     Returns:
-        list of cxxjij.utility.ClassicalSchedule, list of beta range [max, min]
+        List of cxxjij.utility.ClassicalSchedule and the beta range
+        [final beta, initial beta].
     """
+    excitation_rate = 0.01
+    max_beta = float(np.finfo(float).max)
 
-    # Set seed
-    if seed is not None:
-        np.random.seed(seed)
+    estimate_range = beta_min is None or beta_max is None
+    beta_tail = None
+    if estimate_range:
+        scaled_sigma, scales, min_coefficients = _ising_beta_range_statistics(cxxgraph, from_qubo=from_qubo)
+        if min_coefficients.size == 0:
+            # All coefficients are zero: every state has the same energy.
+            scaled_sigma, scales, min_coefficients = np.ones(1), np.ones(1), np.ones(1)
 
-    THRESHOLD = 1e-8
-    dE_max = 1.0
-    dE_min = 1.0
-    ising_interaction = cxxgraph.get_interactions()
-    rate_dE = 0.5
+        if beta_min is None:
+            limit = max_beta if beta_max is None else min(beta_max, max_beta)
+            beta_min = min(_estimate_initial_beta(scaled_sigma, scales, 0.9 if use_quantiles else 1.0), limit)
 
-    if beta_min is None or beta_max is None:
-        # if `abs_ising_interaction` is empty, set min/max delta_energy to 1 (a trivial case).
-        if ising_interaction.shape[0] <= 1:
-            dE_max = 1
-            dE_min = 1
-        else:
-            random_spin = np.random.choice([-1, 1], size=(ising_interaction.shape[0], 2))
-            random_spin[-1, :] = 1  # last element is bias term
-
-            # Calculate quadratic and linear term energy difference separately
-            dE_quad = (ising_interaction[:-1, :-1] @ random_spin[:-1, :] * (-2 * random_spin[:-1, :]))
-            if isinstance(ising_interaction, np.ndarray):
-                dE_linear = (ising_interaction[:-1, -1][:, np.newaxis] * random_spin[:-1])
+        if beta_max is None:
+            m_min = min_coefficients.min()
+            num_min = np.count_nonzero(np.isclose(min_coefficients, m_min, rtol=1e-9, atol=0.0))
+            beta_clean = (math.log(num_min / excitation_rate) / 2) / float(m_min)
+            if use_quantiles:
+                beta_max = (math.log(100) / 2) / float(np.quantile(min_coefficients, 0.1))
+                if num_sweeps >= 4:
+                    beta_tail = min(beta_clean, max_beta)
             else:
-                dE_linear = (ising_interaction[:-1, -1].toarray() * random_spin[:-1])
+                beta_max = beta_clean
+            beta_max = min(max(beta_max, beta_min * 10.0), max_beta)
 
-            dE_quad_abs = np.abs(dE_quad)
-            # Recalculate the maximum rate of change in energy if the absolute value of dE_quad is above the threshold
-            if np.any(dE_quad_abs > THRESHOLD):
-                rate_dE = np.max(np.abs(dE_linear[dE_quad_abs > THRESHOLD]) /(dE_quad_abs[dE_quad_abs > THRESHOLD].mean() + THRESHOLD))
-
-            dE = dE_quad
-            dE_positive = dE[dE > THRESHOLD]
-
-            if len(dE_positive) == 0:
-                dE_min = 1
-                dE_max = 1.1
-            else:
-                dE_max = np.median(dE_positive, axis=0).mean()
-                dE_min = np.min(dE_positive, axis=0).mean()
-
-
-    n = ising_interaction.shape[0]  # n+1
-
-    prob_init = 9/10 - 8/10 * np.tanh(rate_dE/50) + THRESHOLD
-    prob_final = 1 / 1000
-
-    if beta_min is None:
-        p_init = prob_init
-        # 二分探索で 2 beta p_init = exp(-beta dE) - exp(-beta dE_max)を解く
-        # Binary search to find beta where f = 0
-        beta_low, beta_high = -np.log(prob_init) / dE_max, -np.log(prob_init) / dE_min
-        tolerance = 1e-8
-        max_iterations = 5
-        for iteration in range(max_iterations):
-            _beta = (beta_low + beta_high) / 2
-            f = 2 * _beta * p_init - np.exp(-_beta * dE_min) + np.exp(-_beta * dE_max)
-            if abs(f) < tolerance:
-                break
-            if f > 0:
-                beta_high = _beta
-            else:
-                beta_low = _beta
-        beta_min = beta_low
-
-        beta_min_min = beta_min * 0.8
-        beta_min = beta_min_min + (beta_min * 1.5 - beta_min_min) * np.tanh(num_sweeps / n)
-
-    if beta_max is None:
-        int_abs = np.abs(ising_interaction)
-        int_min = np.min(int_abs[int_abs > THRESHOLD])
-
-        int_min = max(int_min, dE_min / 10.0)
-
-        beta_max_int = -np.log(prob_final) / int_min
-        beta_max_dE = -np.log(prob_final) / dE_min
-
-        if rate_dE < 2:
-            beta_max_min = min(beta_max_dE, beta_max_int)
-            beta_max_max = max(beta_max_dE, beta_max_int)
-            beta_max = beta_max_min + (beta_max_max - beta_max_min) * np.tanh(num_sweeps / (2 * n))
-        else:
-            last_step = min(100, num_sweeps // 10 + 1)
-            # last_stepだけ繰り返した時に少なくとも1度フリップする確率を計算
-            # 1stepでは exp(-beta dE) でフリップするとする.
-            _dE = max(dE_min, int_min)
-            beta_max = -np.log(prob_final) / _dE / last_step
-
-        if beta_max < beta_min:
-            beta_max = beta_min * 10.0
-
-    if rate_dE > 1:
-        beta_min *= rate_dE
-        beta_max *= rate_dE
+    if use_quantiles and estimate_range:
+        # Evaluate at every sweep through the benchmarked sweep range.
+        # Group sweeps at larger budgets to bound the schedule size.
+        max_temperature_steps = 10_000
+        sweeps_per_beta = max(1, (num_sweeps + max_temperature_steps - 1) // max_temperature_steps)
+        if beta_tail is not None and beta_tail > beta_max:
+            tail_sweeps = max(2, round(num_sweeps / 10))
+            schedule = _geometric_schedule_segment(beta_min, beta_max, num_sweeps - tail_sweeps, sweeps_per_beta)
+            schedule.extend(
+                _geometric_schedule_segment(beta_max, beta_tail, tail_sweeps, sweeps_per_beta, skip_start=True)
+            )
+            return schedule, [beta_tail, beta_min]
+        schedule = _geometric_schedule_segment(beta_min, beta_max, num_sweeps, sweeps_per_beta)
+        return schedule, [beta_max, beta_min]
 
     num_sweeps_per_beta = max(1, num_sweeps // 1000)
     # set schedule to cxxjij

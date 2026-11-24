@@ -73,6 +73,8 @@ class BaseSampler(dimod.Sampler):
         reinitialize_state=None,
         seed=None,
         offset=None,
+        *,
+        read_seeds=None,
     ):
         """Basic sampling function: for cxxjij sampling.
 
@@ -84,6 +86,8 @@ class BaseSampler(dimod.Sampler):
             reinitialize_state (bool, optional): [description]. Defaults to None.
             seed (int, optional): seed for algorithm. Defaults to None.
             offset (float): an offset which is added to the calculated energy
+            read_seeds (iterator, optional): per-read seeds for the algorithm
+                and init_generator. When supplied, init_generator takes a seed.
 
         Returns:
             :class:`openjij.sampler.response.Response`: results
@@ -92,18 +96,11 @@ class BaseSampler(dimod.Sampler):
         if offset is None:
             offset = 0
 
-        # set algorithm function and set random seed ----
-        if seed is None:
-
-            def sampling_algorithm(system):
+        @measure_time
+        def sampling_algorithm(system, read_seed):
+            if read_seed is None:
                 return algorithm(system, self._params["schedule"])
-
-        else:
-
-            def sampling_algorithm(system):
-                return algorithm(system, seed, self._params["schedule"])
-
-        # ---- set algorithm function and set random seed
+            return algorithm(system, read_seed, self._params["schedule"])
 
         # setting of response class
         execution_time = []
@@ -115,14 +112,16 @@ class BaseSampler(dimod.Sampler):
         @measure_time
         def exec_sampling():
             for _ in range(self._params["num_reads"]):
+                read_seed = seed if read_seeds is None else next(read_seeds)
                 # Re-initialize at each sampling
                 # In reverse annealing,
                 # user can use previous result (if re-initilize is set to False)
                 if reinitialize_state:
-                    system.reset_spins(init_generator())
+                    initial_state = init_generator() if read_seeds is None else init_generator(read_seed)
+                    system.reset_spins(initial_state)
                 # Run sampling algorithm
                 # and measure execution time
-                _exec_time = measure_time(sampling_algorithm)(system)
+                _exec_time = sampling_algorithm(system, read_seed)
                 execution_time.append(_exec_time)
 
                 # get Ising result (state and system information)
