@@ -27,6 +27,7 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 
 // include OpenJij
 #include <openjij/graph/all.hpp>
@@ -59,6 +60,22 @@
 #include "graph/all.hpp"
 #include "result/all.hpp"
 #include "utility/all.hpp"
+
+TEST(ScheduleList, FiniteBetasAcrossExtremeRatios) {
+   for (const auto &[first, last] :
+        {std::pair{1e-150, 1e160}, std::pair{1e160, 1e-150}}) {
+      const auto schedule = openjij::utility::make_classical_schedule_list(first, last, 2, 5);
+      ASSERT_EQ(schedule.size(), 5u);
+      EXPECT_DOUBLE_EQ(schedule.front().updater_parameter.beta, first);
+      EXPECT_DOUBLE_EQ(schedule.back().updater_parameter.beta, last);
+      EXPECT_NEAR(schedule[2].updater_parameter.beta / 1e5, 1.0, 1e-12);
+      for (const auto &step : schedule) {
+         EXPECT_EQ(step.one_mc_step, 2u);
+         EXPECT_TRUE(std::isfinite(step.updater_parameter.beta));
+         EXPECT_GT(step.updater_parameter.beta, 0.0);
+      }
+   }
+}
 
 std::int32_t main(std::int32_t argc, char **argv) {
    testing::InitGoogleTest(&argc, argv);
