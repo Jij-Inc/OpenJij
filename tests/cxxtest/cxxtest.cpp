@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 
 // include OpenJij
 #include <openjij/graph/all.hpp>
@@ -82,6 +83,24 @@ TEST(ScheduleList, EqualZeroEndpointsStayAtZero) {
    ASSERT_EQ(schedule.size(), 4u);
    for (const auto &step : schedule) {
       EXPECT_EQ(step.updater_parameter.beta, 0.0);
+   }
+}
+
+TEST(ScheduleList, BetasStayFiniteAndMonotoneNearSaturation) {
+   const double hot = std::log(2.0) / 3.85575917890534e-309;
+   const double cold = std::numeric_limits<double>::max();
+   for (const auto &[first, last] : {std::pair{hot, cold}, std::pair{cold, hot}}) {
+      const auto schedule = openjij::utility::make_classical_schedule_list(first, last, 1, 1000);
+      ASSERT_EQ(schedule.size(), 1000u);
+      EXPECT_EQ(schedule.front().updater_parameter.beta, first);
+      EXPECT_EQ(schedule.back().updater_parameter.beta, last);
+      double previous = first;
+      for (const auto &step : schedule) {
+         const double beta = step.updater_parameter.beta;
+         EXPECT_TRUE(std::isfinite(beta));
+         EXPECT_TRUE(first <= last ? previous <= beta : beta <= previous);
+         previous = beta;
+      }
    }
 }
 

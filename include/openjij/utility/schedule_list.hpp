@@ -13,6 +13,7 @@
 //    limitations under the License.
 
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
@@ -190,11 +191,16 @@ make_classical_schedule_list(double beta_min, double beta_max,
 
   const double r_beta =
       std::pow(ratio, 1.0 / static_cast<double>(num_call_updater - 1));
+  const auto [lower, upper] = std::minmax(beta_min, beta_max);
   double beta = beta_min;
   for (auto &schedule : schedule_list) {
     schedule.one_mc_step = one_mc_step;
     schedule.updater_parameter = ClassicalUpdaterParameter(beta);
-    beta *= r_beta;
+    // Rounding in the step ratio can carry the accumulated beta past an endpoint.
+    beta = std::clamp(beta * r_beta, lower, upper);
+  }
+  if (num_call_updater > 1) {
+    schedule_list.back().updater_parameter.beta = beta_max;
   }
 
   return schedule_list;
