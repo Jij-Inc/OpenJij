@@ -77,6 +77,14 @@ TEST(ScheduleList, FiniteBetasAcrossExtremeRatios) {
    }
 }
 
+TEST(ScheduleList, EqualZeroEndpointsStayAtZero) {
+   const auto schedule = openjij::utility::make_classical_schedule_list(0.0, 0.0, 1, 4);
+   ASSERT_EQ(schedule.size(), 4u);
+   for (const auto &step : schedule) {
+      EXPECT_EQ(step.updater_parameter.beta, 0.0);
+   }
+}
+
 std::int32_t main(std::int32_t argc, char **argv) {
    testing::InitGoogleTest(&argc, argv);
    return RUN_ALL_TESTS();

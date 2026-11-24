@@ -350,6 +350,17 @@ class TestSamplers(unittest.TestCase):
                 response = sampler.sample_qubo(qubo, seed=42, **{endpoint: beta})
                 self.assertEqual(response.info["schedule"][endpoint], beta)
 
+    def test_sa_estimated_beta_min_respects_explicit_beta_max(self):
+        sampler = oj.SASampler()
+        for sparse in (False, True):
+            with self.subTest(sparse=sparse):
+                response = sampler.sample_ising({0: 1e-12}, {}, beta_max=10.0, seed=42, sparse=sparse)
+                betas = [step.updater_parameter.beta for step in sampler._params["schedule"]]
+                self.assertEqual(response.info["schedule"]["beta_max"], 10.0)
+                self.assertLessEqual(response.info["schedule"]["beta_min"], 10.0)
+                self.assertEqual(betas[-1], 10.0)
+                self.assertTrue(np.all(np.diff(betas) >= 0))
+
     def test_sa_with_negative_interactions(self):
         # sa with negative interactions
         sampler = oj.SASampler()

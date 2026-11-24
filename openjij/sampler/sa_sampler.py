@@ -991,7 +991,8 @@ def geometric_ising_beta_schedule(
     When the tail endpoint is colder than the main interval, the final
     10 percent of sweeps cool geometrically to it, provided there is
     room for at least two sweeps in each interval. A supplied final
-    endpoint sets the end of a single geometric interval.
+    endpoint sets the end of a single geometric interval and caps an
+    automatically estimated starting beta.
     Automatic endpoints that exceed float range use the largest finite beta.
 
     The sampler omits fields within cancellation roundoff when it converts
@@ -1026,7 +1027,8 @@ def geometric_ising_beta_schedule(
             scaled_sigma, scales, min_coefficients = np.ones(1), np.ones(1), np.ones(1)
 
         if beta_min is None:
-            beta_min = min(_estimate_initial_beta(scaled_sigma, scales, 0.9 if use_quantiles else 1.0), max_beta)
+            limit = max_beta if beta_max is None else min(beta_max, max_beta)
+            beta_min = min(_estimate_initial_beta(scaled_sigma, scales, 0.9 if use_quantiles else 1.0), limit)
 
         if beta_max is None:
             m_min = min_coefficients.min()

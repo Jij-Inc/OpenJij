@@ -77,13 +77,18 @@ if (GENINFO_BIN AND NOT DEFINED GENINFO_EXTERN_FLAG)
 		CACHE STRING "Geninfo flag to exclude system sources.")
 endif ()
 
-# enable ignore-errors mismatch flag for geninfo, to bypass line number mismatch errors
+# Keep collecting coverage when gcov reports conflicting function line ranges.
 if (GENINFO_BIN AND NOT DEFINED GENINFO_IGNORE_ERRORS_FLAG)
 	set(FLAG "")
 	execute_process(COMMAND ${GENINFO_BIN} --help OUTPUT_VARIABLE GENINFO_HELP)
 	string(REGEX MATCH "ignore-errors" GENINFO_RES "${GENINFO_HELP}")
 	if (GENINFO_RES)
 		set(FLAG --ignore-errors mismatch)
+		execute_process(COMMAND ${GENINFO_BIN} --version OUTPUT_VARIABLE GENINFO_VERSION_OUTPUT)
+		string(REGEX MATCH "[0-9]+\\.[0-9]+" GENINFO_VERSION "${GENINFO_VERSION_OUTPUT}")
+		if (GENINFO_VERSION VERSION_GREATER_EQUAL "2.0")
+			set(FLAG --ignore-errors mismatch,inconsistent)
+		endif ()
 	endif ()
 
 	set(GENINFO_IGNORE_ERRORS_FLAG "${FLAG}"

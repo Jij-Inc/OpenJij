@@ -167,7 +167,7 @@ make_classical_schedule_list(double beta_min, double beta_max,
                              std::size_t one_mc_step,
                              std::size_t num_call_updater) {
   auto schedule_list = ClassicalScheduleList(num_call_updater);
-  const double ratio = beta_max / beta_min;
+  const double ratio = beta_min == beta_max ? 1.0 : beta_max / beta_min;
   if (num_call_updater > 1 && beta_min > 0.0 && beta_max > 0.0 &&
       std::isfinite(beta_min) && std::isfinite(beta_max) &&
       !std::isnormal(ratio)) {
