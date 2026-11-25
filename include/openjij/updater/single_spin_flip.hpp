@@ -147,8 +147,16 @@ struct SingleSpinFlip<system::TransverseIsing<GraphType>> {
     FloatType B =
         (1 / 2.) * log(tanh(beta * gamma * (1.0 - s) / num_trotter_slices));
 
-    Eigen::setNbThreads(1);
-    Eigen::initParallel();
+    // Eigen's thread settings are process-wide. When independent systems run
+    // in parallel (run_systems_in_parallel), the caller configures Eigen once
+    // before the workers start, so workers must not write these settings.
+#ifdef USE_OMP
+    if (!omp_in_parallel())
+#endif
+    {
+      Eigen::setNbThreads(1);
+      Eigen::initParallel();
+    }
 
     // generate random number (col major)
     for (std::size_t t = 0; t < num_trotter_slices; t++) {

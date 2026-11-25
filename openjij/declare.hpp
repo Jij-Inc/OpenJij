@@ -31,8 +31,10 @@
 #include <openjij/sampler/sa_sampler.hpp>
 #include <openjij/sampler/integer_sa_sampler.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <exception>
+#include <functional>
 #include <stdexcept>
 #include <vector>
 
@@ -821,6 +823,12 @@ inline void run_systems_in_parallel(const std::vector<System *> &systems,
     if (system == nullptr) {
       throw std::invalid_argument("systems must not contain None.");
     }
+  }
+  // Workers mutate their system, so the same object must not appear twice.
+  std::vector<const System *> sorted(systems.begin(), systems.end());
+  std::sort(sorted.begin(), sorted.end(), std::less<const System *>());
+  if (std::adjacent_find(sorted.begin(), sorted.end()) != sorted.end()) {
+    throw std::invalid_argument("systems must not contain the same system twice.");
   }
   // Initialize Eigen's static state before threads start using it.
   Eigen::initParallel();

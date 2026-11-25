@@ -361,9 +361,9 @@ class SQASampler(BaseSampler):
                 beta_max=self._params["beta_max"],
                 coupling_min=coupling_min,
                 coupling_max=coupling_max,
-                gamma=system_gamma,
                 from_qubo=bqm.vartype == BINARY,
             )
+            system_gamma = self.schedule_info["gamma"]
         # ------------------------------- set annealing schedule
 
         # make init state generator --------------------------------
@@ -680,7 +680,7 @@ def geometric_sqa_schedule(
     *,
     coupling_min: Optional[float] = None,
     coupling_max: Optional[float] = None,
-    gamma: float = 1.0,
+    gamma: Optional[float] = None,
     from_qubo: bool = False,
 ):
     """Default SQA schedule: classical and quantum terms annealed together.
@@ -711,7 +711,13 @@ def geometric_sqa_schedule(
       energy landscape by :func:`trotter_coupling_range`.
 
     The pair is converted to :math:`(\\beta, s)` for a system created with
-    the transverse field ``gamma``.
+    the transverse field ``gamma``. Only :math:`s\\beta` and
+    :math:`\\beta\\Gamma(1-s)` matter, so ``gamma`` is a choice of units.
+    Leave it ``None`` to pick the value that keeps :math:`s` away from 0 and 1
+    over the whole schedule; with a fixed ``gamma``, a classical inverse
+    temperature far above :math:`\\operatorname{artanh} e^{-2J_\\perp}/\\Gamma`
+    rounds :math:`s` to 1 and loses the coupling. The value used is reported
+    as ``info["gamma"]`` and must be the transverse field of the system.
 
     Args:
         cxxgraph: Ising graph, ``Dense`` or ``CSRSparse``.
@@ -721,7 +727,8 @@ def geometric_sqa_schedule(
         beta_max (float, optional): final classical inverse temperature per slice.
         coupling_min (float, optional): initial Trotter coupling :math:`J_\\perp`.
         coupling_max (float, optional): final Trotter coupling :math:`J_\\perp`.
-        gamma (float): transverse field of the system that runs the schedule.
+        gamma (float, optional): transverse field of the system that runs the
+            schedule. Chosen automatically when None.
         from_qubo (bool): the graph was converted from a BINARY model.
 
     Returns:
@@ -734,8 +741,8 @@ def geometric_sqa_schedule(
         coupling_max = estimated[1] if coupling_max is None else coupling_max
     if not (0 < coupling_min and 0 < coupling_max and np.isfinite(coupling_min) and np.isfinite(coupling_max)):
         raise ValueError("coupling_min and coupling_max must be positive and finite.")
-    if not gamma > 0:
-        raise ValueError("gamma must be positive.")
+    if gamma is not None and not (gamma > 0 and np.isfinite(gamma)):
+        raise ValueError("gamma must be positive and finite.")
 
     classical, beta_range = geometric_ising_beta_schedule(
         cxxgraph,
@@ -754,7 +761,10 @@ def geometric_sqa_schedule(
     coupling = coupling_min * (coupling_max / coupling_min) ** fraction
 
     # beta * gamma * (1 - s) / M such that the coupling is J_perp.
-    quantum = np.arctanh(np.exp(-2.0 * coupling)) / gamma
+    quantum_field = np.arctanh(np.exp(-2.0 * coupling))
+    if gamma is None:
+        gamma = _well_conditioned_gamma(beta_cl, quantum_field)
+    quantum = quantum_field / gamma
     with np.errstate(over="ignore"):
         beta_per_slice = beta_cl + quantum
         s = beta_cl / beta_per_slice
@@ -773,11 +783,28 @@ def geometric_sqa_schedule(
         "beta_min": beta_range[1],
         "coupling_min": coupling_min,
         "coupling_max": coupling_max,
+        "gamma": gamma,
         "trotter": trotter,
         "num_sweeps": num_sweeps,
         **landscape,
     }
     return schedule, info
+
+
+def _well_conditioned_gamma(beta_cl, quantum_field):
+    """Transverse field that centres s = beta_cl / (beta_cl + quantum_field / gamma).
+
+    The ratio beta_cl * gamma / quantum_field is s / (1 - s). Choosing gamma so
+    that its smallest and largest values over the schedule are reciprocal keeps
+    both s and 1 - s representable: a ratio range R gives 1 - s >= 1 / (1 + sqrt(R)).
+    """
+    ok = (beta_cl > 0) & np.isfinite(beta_cl) & (quantum_field > 0)
+    if not ok.any():
+        return 1.0
+    log_ratio = np.log(beta_cl[ok]) - np.log(quantum_field[ok])
+    log_gamma = -0.5 * (log_ratio.min() + log_ratio.max())
+    # Keep gamma and the resulting beta finite.
+    return float(np.exp(np.clip(log_gamma, -300.0, 300.0)))
 
 
 def linear_ising_schedule(model, beta, gamma, num_sweeps):

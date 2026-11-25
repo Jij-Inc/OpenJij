@@ -57,12 +57,34 @@ class TestSQASchedule(unittest.TestCase):
         self.assertEqual(info["zero_mode_fraction"], stats["zero_mode_fraction"])
         beta = np.array([x.updater_parameter.beta for x in schedule])
         s = np.array([x.updater_parameter.s for x in schedule])
-        coupling = _trotter_coupling(beta, s, 1.0, 4)
+        coupling = _trotter_coupling(beta, s, info["gamma"], 4)
         self.assertAlmostEqual(coupling[0], coupling_min, places=6)
         self.assertAlmostEqual(coupling[-1], coupling_max, places=6)
         # one end can be fixed while the other is estimated
         _, info = geometric_sqa_schedule(self.graph, 4, 100, coupling_max=3.0)
         self.assertEqual((info["coupling_min"], info["coupling_max"]), (coupling_min, 3.0))
+
+    def test_tiny_coefficients_keep_the_coupling(self):
+        # The classical inverse temperature is ~1e12 times the quantum term.
+        # With gamma = 1, s would round to 1 and the coupling would be infinite.
+        bqm = oj.model.model.BinaryQuadraticModel(
+            {i: 1e-12 * v for i, v in self.h.items()},
+            {k: 1e-12 * v for k, v in self.J.items()},
+            0.0,
+            "SPIN",
+            sparse=True,
+        )
+        graph, _ = bqm.get_cxxjij_ising_graph()
+        trotter, num_sweeps = 8, 300
+        schedule, info = geometric_sqa_schedule(graph, trotter, num_sweeps, coupling_min=0.2, coupling_max=2.0)
+        classical, _ = geometric_ising_beta_schedule(graph, num_sweeps=num_sweeps, use_quantiles=True)
+        beta = np.array([x.updater_parameter.beta for x in schedule])
+        s = np.array([x.updater_parameter.s for x in schedule])
+        self.assertGreater(np.min([x.updater_parameter.beta for x in classical]), 1e10)
+        self.assertTrue(np.all((0 < s) & (s < 1)))
+        np.testing.assert_allclose(s * beta / trotter, [x.updater_parameter.beta for x in classical], rtol=1e-9)
+        coupling = _trotter_coupling(beta, s, info["gamma"], trotter)
+        np.testing.assert_allclose(coupling[[0, -1]], [0.2, 2.0], rtol=1e-6)
 
     def test_sampler_uses_default_schedule(self):
         res = oj.SQASampler().sample(self.bqm, num_sweeps=50, num_reads=3, seed=1)
@@ -236,6 +258,13 @@ class TestTransverseIsingUpdaters(unittest.TestCase):
         run(systems, list(range(num_systems)), [((beta, s), num_sweeps)])
         spins = np.array([np.asarray(x.trotter_spins)[:-1].T for x in systems])
         return (spins[:, :, 0] * spins[:, :, 1]).mean(), (spins[:, 0, :] * spins[:, 1, :]).mean()
+
+    def test_parallel_run_rejects_duplicate_systems(self):
+        system = cxxjij.system.make_transverse_ising([[1, -1, 1]] * 4, self.graph, 1.0)
+        for updater in ["SingleSpinFlip", "TrotterClusterFlip"]:
+            run = getattr(cxxjij.algorithm, f"Algorithm_{updater}_run_parallel")
+            with self.subTest(updater=updater), self.assertRaises(ValueError):
+                run([system, system], [0, 1], [((1.0, 0.5), 1)], 2)
 
     def test_equilibrium(self):
         for updater in ["SingleSpinFlip", "TrotterClusterFlip"]:
