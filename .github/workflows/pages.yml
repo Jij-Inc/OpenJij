@@ -73,11 +73,15 @@ jobs:
           TAG_NAME="${GITHUB_REF##refs/tags/}"
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "deploy_tag_name=deploy-${TAG_NAME}" >> $GITHUB_OUTPUT
-      - uses: actions/upload-artifact@v4
+      # Upload the Pages artifact here rather than in the deploy job.
+      # deploy-pages looks the artifact up immediately, and an artifact
+      # finalized only a few hundred milliseconds earlier is sometimes not
+      # yet listed ("No artifacts named github-pages were found"). Uploading
+      # in this job leaves the deploy job's startup time as a buffer.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          name: HTML
           path: ./docs/_build/html
-          retention-days: 30
   # Single deploy job since we're just deploying
   deploy:
     needs: build_python_docs
@@ -95,17 +99,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v5
-        with:
-          name: HTML
-          path: ./html
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          # Upload entire repository
-          path: "./html"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
