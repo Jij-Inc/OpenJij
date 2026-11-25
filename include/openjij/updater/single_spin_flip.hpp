@@ -213,8 +213,12 @@ private:
                         spins(i, mod_t((int64_t)t - 1, num_trotter_slices)));
 
     // calculate total dE
-    FloatType dE =
-        s * (beta / num_trotter_slices) * system.dE(i, t) + B * dEtrot;
+    // At s = 1 the Trotter coupling is infinite (B = -inf). A flip between
+    // disagreeing neighbours (dEtrot == 0) does not change the Trotter energy,
+    // so take the limit 0 instead of evaluating -inf * 0 = NaN, which would
+    // reject the flip and freeze the slices.
+    FloatType dE = s * (beta / num_trotter_slices) * system.dE(i, t) +
+                   (dEtrot == 0 ? FloatType(0) : B * dEtrot);
 
     // for debugging
 

@@ -31,6 +31,15 @@
 #include <openjij/sampler/sa_sampler.hpp>
 #include <openjij/sampler/integer_sa_sampler.hpp>
 
+#include <cstdint>
+#include <exception>
+#include <stdexcept>
+#include <vector>
+
+#ifdef USE_OMP
+#include <omp.h>
+#endif
+
 namespace py = pybind11;
 
 using namespace py::literals;
@@ -790,6 +799,96 @@ inline void declare_Algorithm_run(py::module &m,
         py::gil_scoped_acquire acquire;
       },
       "system"_a, "tuplelist"_a, "callback"_a = nullptr);
+}
+
+// Run independent systems (e.g. one per read) concurrently.
+// Each system gets its own random number engine seeded with seeds[k], so the
+// result of every system does not depend on the number of threads. Updaters
+// that parallelize internally (e.g. SingleSpinFlip over Trotter slices) run
+// single-threaded: per-sweep fork/join is slower than one thread for typical
+// problem sizes, especially on CPUs with performance and efficiency cores.
+template <template <typename> class Updater, typename System,
+          typename RandomNumberEngine, typename ScheduleListType>
+inline void run_systems_in_parallel(const std::vector<System *> &systems,
+                                    const std::vector<std::size_t> &seeds,
+                                    const ScheduleListType &schedule_list,
+                                    const int num_threads) {
+  if (systems.size() != seeds.size()) {
+    throw std::invalid_argument(
+        "the number of systems and seeds must be the same.");
+  }
+  for (const auto *system : systems) {
+    if (system == nullptr) {
+      throw std::invalid_argument("systems must not contain None.");
+    }
+  }
+  // Initialize Eigen's static state before threads start using it.
+  Eigen::initParallel();
+  Eigen::setNbThreads(1);
+  std::exception_ptr error = nullptr;
+  {
+    py::gil_scoped_release release;
+    const auto num_systems = static_cast<std::int64_t>(systems.size());
+#ifdef USE_OMP
+    const int threads = num_threads > 0 ? num_threads : omp_get_max_threads();
+#pragma omp parallel for schedule(dynamic, 1) num_threads(threads)
+#endif
+    for (std::int64_t k = 0; k < num_systems; ++k) {
+      try {
+#ifdef USE_OMP
+        // Scoped to this implicit task; does not leak to the caller.
+        omp_set_num_threads(1);
+#endif
+        RandomNumberEngine rng(seeds[k]);
+        algorithm::Algorithm<Updater>::run(*systems[k], rng, schedule_list);
+      } catch (...) {
+#ifdef USE_OMP
+#pragma omp critical(openjij_run_parallel_error)
+#endif
+        {
+          if (!error) {
+            error = std::current_exception();
+          }
+        }
+      }
+    }
+  }
+  if (error) {
+    std::rethrow_exception(error);
+  }
+}
+
+template <template <typename> class Updater, typename System,
+          typename RandomNumberEngine>
+inline void declare_Algorithm_run_parallel(py::module &m,
+                                           const std::string &updater_str) {
+  auto str = std::string("Algorithm_") + updater_str +
+             std::string("_run_parallel");
+  using SystemType = typename system::get_system_type<System>::type;
+  using TupleList = std::vector<std::pair<
+      typename utility::UpdaterParameter<SystemType>::Tuple, std::size_t>>;
+
+  m.def(
+      str.c_str(),
+      [](const std::vector<System *> &systems,
+         const std::vector<std::size_t> &seeds,
+         const utility::ScheduleList<SystemType> &schedule_list,
+         int num_threads) {
+        run_systems_in_parallel<Updater, System, RandomNumberEngine>(
+            systems, seeds, schedule_list, num_threads);
+      },
+      "systems"_a, "seeds"_a, "schedule_list"_a, "num_threads"_a = 0);
+
+  m.def(
+      str.c_str(),
+      [](const std::vector<System *> &systems,
+         const std::vector<std::size_t> &seeds, const TupleList &tuplelist,
+         int num_threads) {
+        run_systems_in_parallel<Updater, System, RandomNumberEngine>(
+            systems, seeds, utility::make_schedule_list<SystemType>(tuplelist),
+            num_threads);
+      },
+      "systems"_a, "seeds"_a, "tuplelist"_a, "num_threads"_a = 0);
 }
 
 // utility
