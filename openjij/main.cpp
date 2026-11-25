@@ -141,6 +141,55 @@ PYBIND11_MODULE(cxxjij, m) {
           openjij::graph::CSRSparse<openjij::FloatType>>,
       openjij::RandomEngine>(m_algorithm, "SingleSpinFlip");
 
+  // trotter-direction cluster flip
+  openjij::declare_Algorithm_run<
+      openjij::updater::TrotterClusterFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::Dense<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "TrotterClusterFlip");
+  openjij::declare_Algorithm_run<
+      openjij::updater::TrotterClusterFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::Sparse<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "TrotterClusterFlip");
+  openjij::declare_Algorithm_run<
+      openjij::updater::TrotterClusterFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::CSRSparse<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "TrotterClusterFlip");
+
+  // run independent transverse-field systems (reads) in parallel
+  openjij::declare_Algorithm_run_parallel<
+      openjij::updater::SingleSpinFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::Dense<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "SingleSpinFlip");
+  openjij::declare_Algorithm_run_parallel<
+      openjij::updater::SingleSpinFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::Sparse<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "SingleSpinFlip");
+  openjij::declare_Algorithm_run_parallel<
+      openjij::updater::SingleSpinFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::CSRSparse<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "SingleSpinFlip");
+  openjij::declare_Algorithm_run_parallel<
+      openjij::updater::TrotterClusterFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::Dense<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "TrotterClusterFlip");
+  openjij::declare_Algorithm_run_parallel<
+      openjij::updater::TrotterClusterFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::Sparse<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "TrotterClusterFlip");
+  openjij::declare_Algorithm_run_parallel<
+      openjij::updater::TrotterClusterFlip,
+      openjij::system::TransverseIsing<
+          openjij::graph::CSRSparse<openjij::FloatType>>,
+      openjij::RandomEngine>(m_algorithm, "TrotterClusterFlip");
+
   // swendsen-wang
   openjij::declare_Algorithm_run<
       openjij::updater::SwendsenWang,

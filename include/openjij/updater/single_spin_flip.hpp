@@ -147,8 +147,16 @@ struct SingleSpinFlip<system::TransverseIsing<GraphType>> {
     FloatType B =
         (1 / 2.) * log(tanh(beta * gamma * (1.0 - s) / num_trotter_slices));
 
-    Eigen::setNbThreads(1);
-    Eigen::initParallel();
+    // Eigen's thread settings are process-wide. When independent systems run
+    // in parallel (run_systems_in_parallel), the caller configures Eigen once
+    // before the workers start, so workers must not write these settings.
+#ifdef USE_OMP
+    if (!omp_in_parallel())
+#endif
+    {
+      Eigen::setNbThreads(1);
+      Eigen::initParallel();
+    }
 
     // generate random number (col major)
     for (std::size_t t = 0; t < num_trotter_slices; t++) {
@@ -213,8 +221,12 @@ private:
                         spins(i, mod_t((int64_t)t - 1, num_trotter_slices)));
 
     // calculate total dE
-    FloatType dE =
-        s * (beta / num_trotter_slices) * system.dE(i, t) + B * dEtrot;
+    // At s = 1 the Trotter coupling is infinite (B = -inf). A flip between
+    // disagreeing neighbours (dEtrot == 0) does not change the Trotter energy,
+    // so take the limit 0 instead of evaluating -inf * 0 = NaN, which would
+    // reject the flip and freeze the slices.
+    FloatType dE = s * (beta / num_trotter_slices) * system.dE(i, t) +
+                   (dEtrot == 0 ? FloatType(0) : B * dEtrot);
 
     // for debugging
 
