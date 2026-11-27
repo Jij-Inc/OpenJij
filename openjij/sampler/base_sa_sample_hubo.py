@@ -1,19 +1,24 @@
 from __future__ import annotations
-from typing import Optional, Union
 
 import time
-from openjij.sampler.response import Response
-from openjij.variable_type import BINARY, SPIN
+
+from typing import Optional, Union
+
+import numpy as np
+
 from openjij.cxxjij.graph import (
     BinaryPolynomialModel,
-    IsingPolynomialModel
+    IsingPolynomialModel,
 )
 from openjij.cxxjij.sampler import make_sa_sampler
+from openjij.sampler.response import Response
 from openjij.utils.cxx_cast import (
-    cast_to_cxx_update_method,
     cast_to_cxx_random_number_engine,
-    cast_to_cxx_temperature_schedule
+    cast_to_cxx_temperature_schedule,
+    cast_to_cxx_update_method,
 )
+from openjij.variable_type import BINARY, SPIN
+
 
 def to_oj_response(
     variables: list[list[Union[int, float]]], 
@@ -39,6 +44,7 @@ def base_sample_hubo(
     random_number_engine: str = "XORSHIFT",
     seed: Optional[int] = None,
     temperature_schedule: str = "GEOMETRIC",
+    log_history: bool = False,
 ) -> Response:
     
     start_time = time.time()
@@ -75,6 +81,7 @@ def base_sample_hubo(
     sampler.set_temperature_schedule(
         temperature_schedule=cast_to_cxx_temperature_schedule(temperature_schedule)
     )
+    sampler.set_log_history(log_history=log_history)
 
     if beta_min is not None:
         sampler.set_beta_min(beta_min=beta_min)
@@ -117,6 +124,17 @@ def base_sample_hubo(
         "seed": sampler.get_seed(),
     }
 
+    if log_history:
+        response.info["log"] = {
+            "energy_history": np.array(sampler.get_energy_history()),
+            "temperature_history": np.array(sampler.get_temperature_history()),
+        }
+    else:
+        response.info["log"] = {
+            "energy_history": np.empty((num_reads, 0), dtype=float),
+            "temperature_history": np.empty((num_reads, 0), dtype=float),
+        }
+
     # Keep it in for backward compatibility.
     response.info["sampling_time"] = (sample_time + define_sampler_time)*10**6  # micro sec
     response.info["execution_time"] = (sample_time/num_reads)*10**6  # micro sec
@@ -129,4 +147,3 @@ def base_sample_hubo(
     }
 
     return response
-

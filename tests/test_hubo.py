@@ -1,7 +1,11 @@
-import unittest
 import random
-import openjij as oj
+import unittest
+
 import cimod
+import numpy as np
+
+import openjij as oj
+
 
 def calculate_bpm_energy(polynomial, variables):
     energy = 0.0
@@ -211,6 +215,110 @@ class HUBOTest(unittest.TestCase):
     def test_zero_interaction(self):
         sampler = oj.SASampler()
         response = sampler.sample_hubo({(1,2,3):0.0, (1,2):1}, "SPIN")
+
+    def test_SASampler_hubo_log_history(self):
+        polynomial = {
+            (): 0.25,
+            (0,): -1.0,
+            (1,): 0.5,
+            (0, 1): -0.75,
+            (0, 1, 2): 0.2,
+        }
+        num_reads = 4
+        num_sweeps = 8
+        seed = 123
+
+        for vartype in ("BINARY", "SPIN"):
+            with self.subTest(vartype=vartype):
+                common_parameters = {
+                    "vartype": vartype,
+                    "num_reads": num_reads,
+                    "num_sweeps": num_sweeps,
+                    "beta_min": 0.1,
+                    "beta_max": 2.0,
+                    "updater": "METROPOLIS",
+                    "temperature_schedule": "LINEAR",
+                    "seed": seed,
+                }
+
+                sampler = oj.SASampler()
+                unlogged_response = sampler.sample_hubo(
+                    polynomial,
+                    log_history=False,
+                    **common_parameters,
+                )
+                logged_response = sampler.sample_hubo(
+                    polynomial,
+                    log_history=True,
+                    **common_parameters,
+                )
+                energy_history = np.asarray(
+                    logged_response.info["log"]["energy_history"]
+                )
+                temperature_history = np.asarray(
+                    logged_response.info["log"]["temperature_history"]
+                )
+
+                self.assertEqual(
+                    energy_history.shape,
+                    (num_reads, num_sweeps),
+                )
+                self.assertEqual(
+                    temperature_history.shape,
+                    (num_reads, num_sweeps),
+                )
+                np.testing.assert_allclose(
+                    energy_history[:, -1],
+                    logged_response.energies,
+                )
+                np.testing.assert_allclose(
+                    temperature_history,
+                    np.repeat(temperature_history[:1], num_reads, axis=0),
+                )
+
+                unlogged_after_logged_response = sampler.sample_hubo(
+                    polynomial,
+                    log_history=False,
+                    **common_parameters,
+                )
+                for response in (
+                    unlogged_response,
+                    unlogged_after_logged_response,
+                ):
+                    unlogged_energy_history = np.asarray(
+                        response.info["log"]["energy_history"]
+                    )
+                    unlogged_temperature_history = np.asarray(
+                        response.info["log"]["temperature_history"]
+                    )
+
+                    self.assertEqual(
+                        unlogged_energy_history.shape,
+                        (num_reads, 0),
+                    )
+                    self.assertEqual(
+                        unlogged_temperature_history.shape,
+                        (num_reads, 0),
+                    )
+                    np.testing.assert_array_equal(
+                        logged_response.record.sample,
+                        response.record.sample,
+                    )
+                    np.testing.assert_allclose(
+                        logged_response.energies,
+                        response.energies,
+                    )
+
+    def test_SASampler_hubo_log_history_fallback_is_not_supported(self):
+        with self.assertRaises(NotImplementedError):
+            oj.SASampler().sample_hubo(
+                {(0,): -1.0, (0, 1): 0.5},
+                vartype="BINARY",
+                updater="k-local",
+                num_sweeps=4,
+                seed=123,
+                log_history=True,
+            )
     
 
 #BinaryPolynomialModel

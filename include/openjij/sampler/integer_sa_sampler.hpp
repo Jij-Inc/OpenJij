@@ -54,6 +54,10 @@ BaseSA(const ModelType &model, const utility::TemperatureSchedule schedule,
 
   const std::int64_t num_variables = model.GetNumVariables();
   IntegerSAResult result;
+  if (log_history && num_sweeps > 0) {
+    result.energy_history.reserve(num_sweeps);
+    result.temperature_history.reserve(num_sweeps);
+  }
 
   for (std::int64_t sweep = 0; sweep < num_sweeps; ++sweep) {
     const double T = get_T(sweep);
